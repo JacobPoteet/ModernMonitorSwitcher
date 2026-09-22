@@ -74,8 +74,12 @@ jobs:
           New-Item -ItemType Directory -Force -Path msw-app/binaries | Out-Null
           Copy-Item target/release/msw.exe msw-app/binaries/msw-x86_64-pc-windows-msvc.exe
 
+      # Only the crates that are cheap to compile. `--workspace` would pull the
+      # whole Tauri tree through a debug build to run a handful of tests,
+      # minutes before tauri-action compiles all of it again in release. The
+      # release build below is what proves msw-app compiles.
       - name: Test
-        run: cargo test --workspace
+        run: cargo test -p msw-core -p msw-cli
 
       - name: Build the installer and publish the release
         uses: tauri-apps/tauri-action@v0
