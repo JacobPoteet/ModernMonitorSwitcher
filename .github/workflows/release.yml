@@ -1,0 +1,110 @@
+name: Release
+
+# Publishing works by pushing a tag:
+#
+#     git tag v0.2.0 && git push origin v0.2.0
+#
+# That builds the installer, signs the update artifacts, and publishes a
+# release carrying `latest.json`, which is the manifest the application polls.
+#
+# The tag must match the version in msw-app/tauri.conf.json; the build fails
+# early if it does not, because a mismatch produces an update that installs and
+# then still reports itself as out of date.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to build (must already exist)"
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check the tag matches the configured version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.event.inputs.tag || github.ref_name }}"
+
+          $tauriVersion = (Get-Content msw-app/tauri.conf.json | ConvertFrom-Json).version
+          if ($tag -ne "v$tauriVersion") {
+            Write-Error "Tag $tag does not match tauri.conf.json version $tauriVersion."
+            exit 1
+          }
+
+          # The workspace version is what `msw --version` reports, so a drift
+          # here would ship a CLI that misreports itself.
+          $cargoVersion = (Select-String -Path Cargo.toml -Pattern '^version\s*=\s*"(.+)"' |
+            Select-Object -First 1).Matches.Groups[1].Value
+          if ($cargoVersion -ne $tauriVersion) {
+            Write-Error "Cargo.toml version $cargoVersion does not match tauri.conf.json version $tauriVersion."
+            exit 1
+          }
+
+          Write-Host "Building $tag."
+
+      - name: Test
+        run: cargo test --workspace
+
+      - name: Build and stage the CLI sidecar
+        shell: pwsh
+        run: |
+          cargo build --release -p msw-cli
+          New-Item -ItemType Directory -Force -Path msw-app/binaries | Out-Null
+          Copy-Item target/release/msw.exe msw-app/binaries/msw-x86_64-pc-windows-msvc.exe
+
+      - name: Build the installer and publish the release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # The private half of the updater signing key. Without it the build
+          # produces an installer that no existing install will accept as an
+          # update.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          configPath: msw-app/tauri.conf.json
+          tagName: ${{ github.event.inputs.tag || github.ref_name }}
+          releaseName: "Modern Monitor Switcher __VERSION__"
+          releaseBody: |
+            Download `ModernMonitorSwitcher___VERSION___x64-setup.exe` below and run it.
+
+            Existing installations update themselves; there is no need to
+            download anything if you already have it installed.
+
+            Windows SmartScreen warns on first run because the installer is not
+            code-signed. Choose **More info** then **Run anyway**.
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: true
+          updaterJsonPreferNsis: true
+
+      - name: Attach the standalone CLI
+        shell: pwsh
+        run: |
+          $tag = "${{ github.event.inputs.tag || github.ref_name }}"
+          gh release upload $tag target/release/msw.exe --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

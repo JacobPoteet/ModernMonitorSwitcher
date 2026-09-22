@@ -1,0 +1,74 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+//! Shared application state and the view types the settings window consumes.
+
+use std::path::PathBuf;
+use std::sync::Mutex;
+
+use msw_core::Store;
+use serde::Serialize;
+
+use crate::settings::Settings;
+
+pub struct AppState {
+    pub store: Store,
+    pub settings: Mutex<Settings>,
+    pub settings_path: PathBuf,
+}
+
+impl AppState {
+    pub fn new() -> AppState {
+        let store = Store::default_location().unwrap_or_else(|e| {
+            // Without APPDATA there is nowhere canonical to put profiles.
+            // Fall back to beside the executable so the application still runs.
+            tracing::error!(error = %e, "no application data directory; falling back to the executable directory");
+            let dir = std::env::current_exe()
+                .ok()
+                .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+                .unwrap_or_else(|| PathBuf::from("."));
+            Store::at(dir.join("profiles"))
+        });
+
+        let settings_path = Settings::default_path()
+            .unwrap_or_else(|| store.dir().join("..").join("settings.json"));
+        let settings = Settings::load(&settings_path);
+
+        AppState {
+            store,
+            settings: Mutex::new(settings),
+            settings_path,
+        }
+    }
+
+    /// Persist the current settings, logging rather than failing on error.
+    pub fn save_settings(&self) {
+        let settings = self.settings.lock().expect("settings mutex poisoned");
+        if let Err(e) = settings.save(&self.settings_path) {
+            tracing::error!(path = %self.settings_path.display(), error = %e, "could not save settings");
+        }
+    }
+}
+
+/// A profile as the settings window sees it.
+#[derive(Debug, Clone, Serialize)]
+pub struct ProfileView {
+    pub name: String,
+    pub summary: String,
+    pub monitors: Vec<String>,
+    pub saved_at: Option<String>,
+    /// Is this the configuration currently on screen?
+    pub active: bool,
+    /// Accelerator bound to this profile, if any.
+    pub hotkey: Option<String>,
+}
+
+/// What is on screen right now.
+#[derive(Debug, Clone, Serialize)]
+pub struct CurrentStatus {
+    pub active_monitors: Vec<String>,
+    pub inactive_monitors: Vec<String>,
+    /// Name of the saved profile that matches, if one does.
+    pub matching_profile: Option<String>,
+}

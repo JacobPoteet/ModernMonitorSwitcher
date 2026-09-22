@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Modern Monitor Switcher</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main>
+      <section class="status" id="status" aria-live="polite">
+        <div class="status-label">Currently on screen</div>
+        <div class="status-monitors" id="status-monitors">Reading display configuration…</div>
+        <div class="status-profile" id="status-profile"></div>
+      </section>
+
+      <section>
+        <div class="section-head">
+          <h2>Profiles</h2>
+          <button id="save-new" class="primary">Save current layout</button>
+        </div>
+        <div id="profiles" class="profiles"></div>
+      </section>
+
+      <section>
+        <h2>Settings</h2>
+        <div class="settings">
+          <label class="setting">
+            <input type="checkbox" id="autostart" />
+            <span>
+              <strong>Start with Windows</strong>
+              <small>Runs in the tray at login, with no window.</small>
+            </span>
+          </label>
+
+          <label class="setting">
+            <input type="checkbox" id="check-updates" />
+            <span>
+              <strong>Check for updates automatically</strong>
+              <small>Looks for a new release on launch. Nothing installs without asking.</small>
+            </span>
+          </label>
+
+          <div class="setting-actions">
+            <button id="check-now">Check for updates now</button>
+            <button id="open-folder">Open profiles folder</button>
+            <button id="reset-config" class="subtle">Restore Windows layout</button>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        <span id="version"></span>
+        <a href="https://github.com/JacobPoteet/ModernMonitorSwitcher" id="repo-link">GitHub</a>
+      </footer>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <!-- Save / rename dialog -->
+    <div id="name-dialog" class="overlay" hidden>
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="name-dialog-title">
+        <h3 id="name-dialog-title">Save current layout</h3>
+        <p id="name-dialog-body">Give this monitor arrangement a name.</p>
+        <input type="text" id="name-input" maxlength="64" spellcheck="false" />
+        <div class="dialog-error" id="name-error"></div>
+        <div class="dialog-actions">
+          <button id="name-cancel" class="subtle">Cancel</button>
+          <button id="name-confirm" class="primary">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hotkey capture dialog -->
+    <div id="hotkey-dialog" class="overlay" hidden>
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="hotkey-dialog-title">
+        <h3 id="hotkey-dialog-title">Set a hotkey</h3>
+        <p>Press the key combination you want. It needs at least one of Ctrl, Alt or Shift.</p>
+        <div class="hotkey-capture" id="hotkey-capture" tabindex="0">Press a combination…</div>
+        <div class="dialog-error" id="hotkey-error"></div>
+        <div class="dialog-actions">
+          <button id="hotkey-clear" class="subtle">Remove hotkey</button>
+          <button id="hotkey-cancel" class="subtle">Cancel</button>
+          <button id="hotkey-confirm" class="primary" disabled>Assign</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

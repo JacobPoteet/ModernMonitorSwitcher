@@ -1,0 +1,21 @@
+# Rust
+/target/
+**/*.rs.bk
+
+# Tauri generated
+/msw-app/gen/
+/msw-app/binaries/
+
+# Updater signing keys must never be committed
+*.key
+*.key.pub
+
+# OS / editor
+Thumbs.db
+.DS_Store
+.vscode/
+.idea/
+
+# Reference copy of the original MonitorSwitcher, kept locally until the port
+# is verified against hardware. Not part of this project.
+/monitorswitcher-code-Archive/
