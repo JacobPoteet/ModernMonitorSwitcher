@@ -19,6 +19,13 @@ pub struct Settings {
 
     /// Check GitHub for a newer release on launch, and daily thereafter.
     pub check_for_updates: bool,
+
+    /// Nicknames for monitors, keyed by device path, so "Left" and "Middle"
+    /// can stand in for two monitors that both report the same model name.
+    ///
+    /// The device path encodes the EDID, so a nickname follows its monitor
+    /// across reboots and between ports.
+    pub monitor_names: BTreeMap<String, String>,
 }
 
 impl Default for Settings {
@@ -26,6 +33,7 @@ impl Default for Settings {
         Settings {
             hotkeys: BTreeMap::new(),
             check_for_updates: true,
+            monitor_names: BTreeMap::new(),
         }
     }
 }

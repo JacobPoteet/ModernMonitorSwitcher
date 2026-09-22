@@ -31,6 +31,7 @@ const ID_QUIT: &str = "quit";
 /// Create the tray icon. Called once, at startup.
 pub fn create(app: &AppHandle) -> tauri::Result<()> {
     let menu = build_menu(app)?;
+    tracing::info!("tray created");
 
     TrayIconBuilder::with_id(TRAY_ID)
         .icon(tray_icon()?)
@@ -168,6 +169,7 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
 
 fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
     let id = event.id().as_ref().to_string();
+    tracing::info!(menu_item = %id, "tray menu event");
     let app = app.app_handle().clone();
 
     if let Some(name) = id.strip_prefix(APPLY_PREFIX) {
@@ -201,7 +203,16 @@ fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
             std::thread::spawn(msw_core::power::all_monitors_off);
         }
         ID_CHECK_UPDATES => updater::check_interactively(&app),
-        ID_QUIT => app.exit(0),
+        ID_QUIT => {
+            tracing::info!("quitting");
+            // Record the intent before asking to exit. The exit handler vetoes
+            // anything it has not been told about, so that hiding the last
+            // window cannot end a tray application by accident.
+            app.state::<crate::state::QuitFlag>()
+                .0
+                .store(true, std::sync::atomic::Ordering::SeqCst);
+            app.exit(0);
+        }
         _ => {}
     }
 }

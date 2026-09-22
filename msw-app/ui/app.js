@@ -134,20 +134,118 @@ function profileRow(profile) {
   return row;
 }
 
+function renderMonitors(monitors) {
+  const container = $("monitors");
+  container.replaceChildren();
+
+  if (!monitors.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "No monitors detected.";
+    container.append(empty);
+    return;
+  }
+
+  for (const monitor of monitors) {
+    container.append(monitorRow(monitor));
+  }
+}
+
+function monitorRow(monitor) {
+  const row = document.createElement("div");
+  row.className = monitor.active ? "monitor" : "monitor is-off";
+
+  const main = document.createElement("div");
+  main.className = "monitor-main";
+
+  const model = document.createElement("div");
+  model.className = "monitor-model";
+  model.append(document.createTextNode(monitor.model));
+  if (!monitor.active) {
+    const badge = document.createElement("span");
+    badge.className = "badge off";
+    badge.textContent = "Off";
+    model.append(badge);
+  }
+
+  // Resolution and position are how you tell two identical monitors apart:
+  // the one at x=-2560 is the one on the left.
+  const detail = document.createElement("div");
+  detail.className = "monitor-detail";
+  detail.textContent = monitor.active
+    ? `${monitor.resolution} at ${monitor.position}`
+    : "Connected, not in use";
+
+  main.append(model, detail);
+
+  const nickname = document.createElement("input");
+  nickname.type = "text";
+  nickname.className = "nickname";
+  nickname.maxLength = 32;
+  nickname.spellcheck = false;
+  nickname.placeholder = "Nickname";
+  nickname.value = monitor.nickname ?? "";
+
+  let lastSaved = nickname.value;
+  const save = async () => {
+    const value = nickname.value.trim();
+    if (value === lastSaved) return;
+    try {
+      await invoke("set_monitor_name", { key: monitor.key, nickname: value || null });
+      lastSaved = value;
+      toast(value ? `Named "${value}".` : "Nickname removed.");
+      await refresh();
+    } catch (e) {
+      nickname.value = lastSaved;
+      toast(String(e), "error");
+    }
+  };
+
+  nickname.addEventListener("blur", save);
+  nickname.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") nickname.blur();
+    if (event.key === "Escape") {
+      nickname.value = lastSaved;
+      nickname.blur();
+    }
+  });
+
+  row.append(main, nickname);
+  return row;
+}
+
 // ---------------------------------------------------------------------------
 // Actions
 // ---------------------------------------------------------------------------
 
+/// Reload each section independently.
+///
+/// Deliberately not `Promise.all`: that rejects as soon as any one call fails,
+/// which meant a single failing command left the whole window blank, profiles
+/// included. Each section now renders if its own call succeeded, and a failure
+/// says which one it was instead of showing a bare error.
 async function refresh() {
-  try {
-    const [profiles, status] = await Promise.all([
-      invoke("list_profiles"),
-      invoke("current_status"),
-    ]);
-    renderProfiles(profiles);
-    renderStatus(status);
-  } catch (e) {
-    toast(String(e), "error");
+  const sections = [
+    ["profiles", "list_profiles", renderProfiles],
+    ["current display", "current_status", renderStatus],
+    ["monitors", "list_monitors", renderMonitors],
+  ];
+
+  const failures = [];
+
+  await Promise.all(
+    sections.map(async ([label, command, render]) => {
+      try {
+        render(await invoke(command));
+      } catch (e) {
+        console.error(`${command} failed`, e);
+        failures.push(`${label}: ${e}`);
+      }
+    }),
+  );
+
+  if (failures.length) {
+    toast(`Could not load ${failures.join("; ")}`, "error");
   }
 }
 

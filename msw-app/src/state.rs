@@ -12,6 +12,14 @@ use serde::Serialize;
 
 use crate::settings::Settings;
 
+/// Set when the user has actually asked to quit.
+///
+/// The exit handler otherwise vetoes every exit, because hiding the last
+/// window must not end a tray application. Relying on the exit code to tell
+/// the two apart is too subtle — an explicit flag says what was meant.
+#[derive(Default)]
+pub struct QuitFlag(pub std::sync::atomic::AtomicBool);
+
 pub struct AppState {
     pub store: Store,
     pub settings: Mutex<Settings>,
@@ -62,6 +70,22 @@ pub struct ProfileView {
     pub active: bool,
     /// Accelerator bound to this profile, if any.
     pub hotkey: Option<String>,
+}
+
+/// A monitor as the settings window sees it.
+#[derive(Debug, Clone, Serialize)]
+pub struct MonitorView {
+    /// Stable identity, used as the key when setting a nickname.
+    pub key: String,
+    /// What Windows calls it, e.g. "DELL U2724D".
+    pub model: String,
+    /// The nickname, if one has been set.
+    pub nickname: Option<String>,
+    pub active: bool,
+    /// Resolution and desktop position, which is how someone tells two
+    /// identical monitors apart well enough to name them.
+    pub resolution: Option<String>,
+    pub position: Option<String>,
 }
 
 /// What is on screen right now.

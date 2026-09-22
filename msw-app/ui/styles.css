@@ -199,6 +199,78 @@ h3 {
   border-radius: var(--radius);
 }
 
+/* --- Monitors ----------------------------------------------------------- */
+
+.hint {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.monitors {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.monitor {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.monitor.is-off {
+  opacity: 0.65;
+}
+
+.monitor-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.monitor-model {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.monitor-detail {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.badge.off {
+  color: var(--text-muted);
+  border-color: var(--border-strong);
+}
+
+.nickname {
+  width: 150px;
+  font: inherit;
+  padding: 5px 9px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-sunken);
+  color: var(--text);
+  user-select: text;
+  flex-shrink: 0;
+}
+
+.nickname:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  border-color: var(--accent);
+}
+
+.nickname::placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 /* --- Settings ----------------------------------------------------------- */
 
 .settings {
@@ -285,6 +357,8 @@ button.danger:hover:not(:disabled) {
 footer {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  gap: 12px;
   color: var(--text-muted);
   font-size: 12px;
   border-top: 1px solid var(--border);
@@ -293,6 +367,18 @@ footer {
 
 footer a {
   color: var(--text-muted);
+}
+
+/* Sits between the version and the link, and stays centred as they change
+   width. */
+.byline {
+  flex: 1;
+  text-align: center;
+}
+
+.byline strong {
+  color: var(--text);
+  font-weight: 600;
 }
 
 /* --- Toast -------------------------------------------------------------- */

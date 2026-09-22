@@ -8,9 +8,9 @@ binaries. Run from the repository root:
 
 Design notes:
 
-* The glyph is three screens on a stand line, matching what the application
-  actually does. It stays legible down to 16 px because the screens are simple
-  filled rectangles with generous gaps rather than outlines.
+* The glyph is a single monitor: a solid screen, a neck and a base. Solid
+  shapes rather than outlines, because an outline that looks right at 512 px
+  vanishes at 16 px, and the tray is where this icon has to earn its keep.
 * The application icon is white on an accent-coloured rounded square, which is
   the convention for Windows app icons.
 * The tray icon is accent-coloured on transparency. A white glyph would vanish
@@ -36,45 +36,50 @@ ICON_DIR = ROOT / "msw-app" / "icons"
 SS = 8
 
 
-def draw_glyph(size: int, colour: tuple[int, int, int, int], width: float = 0.84) -> Image.Image:
-    """Three screens on a stand line, centred in a square of `size`.
+def draw_glyph(size: int, colour: tuple[int, int, int, int], width: float = 0.76) -> Image.Image:
+    """One monitor — screen, neck, base — centred in a square of `size`.
 
-    `width` is how much of the canvas the group of screens spans. The app icon
-    leaves a margin because it sits on a rounded square; the tray icon fills
-    nearly the whole canvas, because at 16 px every pixel counts.
+    `width` is how much of the canvas the screen spans. The app icon leaves a
+    margin because it sits on a rounded square; the tray icon fills more of its
+    canvas, because at 16 px every pixel counts.
+
+    The screen is a solid rounded rectangle rather than an outlined bezel. An
+    outline thin enough to look right at 512 px disappears at 16 px, and the
+    tray is where this icon actually has to work.
     """
     s = size * SS
     img = Image.new("RGBA", (s, s), TRANSPARENT)
     d = ImageDraw.Draw(img)
 
-    # Proportions as fractions of the canvas. The screens are close to 16:9 so
-    # they read as monitors rather than as bars, and the group is centred
-    # slightly high to leave room for the stand line.
-    gap = 0.04 * s
-    total_w = width * s
-    screen_w = (total_w - 2 * gap) / 3
-    screen_h = screen_w * 9 / 16
+    screen_w = width * s
+    screen_h = screen_w * 0.66  # a little taller than 16:9, which reads better small
 
-    left = (s - total_w) / 2
-    top = (s - screen_h) / 2 - 0.05 * s
-    radius = max(1, int(0.08 * screen_h))
+    neck_w = screen_w * 0.17
+    neck_h = s * 0.075
+    base_w = screen_w * 0.46
+    base_h = s * 0.058
 
-    for i in range(3):
-        x0 = left + i * (screen_w + gap)
-        d.rounded_rectangle(
-            [x0, top, x0 + screen_w, top + screen_h],
-            radius=radius,
-            fill=colour,
-        )
+    # Centre the whole assembly vertically.
+    total_h = screen_h + neck_h + base_h
+    top = (s - total_h) / 2
+    cx = s / 2
 
-    # Stand line beneath the screens, slightly narrower than the group.
-    bar_h = 0.05 * s
-    bar_w = total_w * 0.5
-    bar_x = (s - bar_w) / 2
-    bar_y = top + screen_h + 0.085 * s
     d.rounded_rectangle(
-        [bar_x, bar_y, bar_x + bar_w, bar_y + bar_h],
-        radius=bar_h / 2,
+        [cx - screen_w / 2, top, cx + screen_w / 2, top + screen_h],
+        radius=max(1, int(0.10 * screen_h)),
+        fill=colour,
+    )
+
+    neck_top = top + screen_h
+    d.rectangle(
+        [cx - neck_w / 2, neck_top, cx + neck_w / 2, neck_top + neck_h],
+        fill=colour,
+    )
+
+    base_top = neck_top + neck_h
+    d.rounded_rectangle(
+        [cx - base_w / 2, base_top, cx + base_w / 2, base_top + base_h],
+        radius=base_h / 2,
         fill=colour,
     )
 
@@ -95,7 +100,7 @@ def app_icon(size: int) -> Image.Image:
 
 def tray_icon(size: int) -> Image.Image:
     """Accent glyph on transparency, for the notification area."""
-    return draw_glyph(size, ACCENT, width=0.98)
+    return draw_glyph(size, ACCENT, width=0.84)
 
 
 def main() -> None:

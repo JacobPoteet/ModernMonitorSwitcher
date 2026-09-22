@@ -86,6 +86,46 @@ pub fn preflight_profile(app: AppHandle, name: String) -> Result<Vec<String>, St
         .collect())
 }
 
+/// Every monitor Windows knows about, with its nickname if it has one.
+#[tauri::command]
+pub fn list_monitors(app: AppHandle) -> Result<Vec<crate::state::MonitorView>, String> {
+    profiles::list_monitors(&app)
+}
+
+/// Give a monitor a nickname, or clear it by passing nothing.
+///
+/// Keyed by device path, so the nickname follows the monitor across reboots
+/// and between ports rather than being attached to whatever the display
+/// happens to be numbered this boot.
+#[tauri::command]
+pub fn set_monitor_name(
+    app: AppHandle,
+    key: String,
+    nickname: Option<String>,
+) -> Result<(), String> {
+    {
+        let state = app.state::<AppState>();
+        let mut settings = state.settings.lock().expect("settings mutex poisoned");
+
+        match nickname {
+            Some(name) if !name.trim().is_empty() => {
+                let name = name.trim();
+                if name.chars().count() > 32 {
+                    return Err("Keep the nickname to 32 characters or fewer.".to_string());
+                }
+                settings.monitor_names.insert(key, name.to_string());
+            }
+            _ => {
+                settings.monitor_names.remove(&key);
+            }
+        }
+    }
+
+    app.state::<AppState>().save_settings();
+    profiles::refresh(&app);
+    Ok(())
+}
+
 #[tauri::command]
 pub fn get_settings(app: AppHandle) -> Settings {
     let state = app.state::<AppState>();
@@ -191,17 +231,28 @@ pub fn reset_display_config() -> Result<(), String> {
     }
 }
 
+/// Show the profiles folder in Explorer.
+///
+/// Uses Explorer directly rather than the opener plugin, which reported
+/// success and opened nothing.
 #[tauri::command]
 pub fn open_profiles_folder(app: AppHandle) -> Result<(), String> {
-    use tauri_plugin_opener::OpenerExt;
-
     let state = app.state::<AppState>();
     let dir = state.store.dir().to_path_buf();
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
 
-    app.opener()
-        .open_path(dir.to_string_lossy(), None::<&str>)
-        .map_err(|e| e.to_string())
+    tracing::info!(dir = %dir.display(), "opening profiles folder");
+
+    // Explorer exits non-zero even when it works, so the status is not worth
+    // checking; only a failure to launch it at all is an error.
+    std::process::Command::new("explorer")
+        .arg(&dir)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| {
+            tracing::error!(error = %e, "could not launch Explorer");
+            format!("Could not open {}: {e}", dir.display())
+        })
 }
 
 /// Open the project page in the real browser.

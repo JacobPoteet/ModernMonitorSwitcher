@@ -19,3 +19,6 @@ Thumbs.db
 # Reference copy of the original MonitorSwitcher, kept locally until the port
 # is verified against hardware. Not part of this project.
 /monitorswitcher-code-Archive/
+
+# Local handoff artifacts (installer + profile copies), not part of the repo
+/handoff/

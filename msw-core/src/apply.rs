@@ -753,6 +753,67 @@ mod tests {
     }
 
     #[test]
+    fn nicknames_replace_model_names() {
+        let config = config_with_identical_pair(0xaaa);
+        let nicknames = std::collections::BTreeMap::from([
+            (
+                "\\\\?\\DISPLAY#DEL42D3#UID100".to_string(),
+                "Left".to_string(),
+            ),
+            (
+                "\\\\?\\DISPLAY#DEL42D0#UID300".to_string(),
+                "Right".to_string(),
+            ),
+        ]);
+
+        assert_eq!(
+            config.active_monitor_labels_with(&nicknames),
+            vec!["Left", "BenQ GL2780", "Right"],
+            "a named monitor uses its nickname, an unnamed one keeps its model"
+        );
+    }
+
+    #[test]
+    fn a_nicknamed_monitor_needs_no_numeric_suffix() {
+        // Only one of the identical pair is named. The other has nothing left
+        // to collide with, so neither should pick up a "#1".
+        let config = config_with_identical_pair(0xaaa);
+        let nicknames = std::collections::BTreeMap::from([(
+            "\\\\?\\DISPLAY#DEL42D3#UID100".to_string(),
+            "Left".to_string(),
+        )]);
+
+        assert_eq!(
+            config.active_monitor_labels_with(&nicknames),
+            vec!["Left", "BenQ GL2780", "DELL U2724D"]
+        );
+    }
+
+    #[test]
+    fn a_blank_nickname_falls_back_to_the_model() {
+        let config = config_with_identical_pair(0xaaa);
+        let nicknames = std::collections::BTreeMap::from([(
+            "\\\\?\\DISPLAY#BNQ78EC#UID200".to_string(),
+            "   ".to_string(),
+        )]);
+
+        assert_eq!(
+            config.active_monitor_labels_with(&nicknames)[1],
+            "BenQ GL2780"
+        );
+    }
+
+    #[test]
+    fn monitor_keys_are_the_device_path() {
+        let config = config_with_identical_pair(0xaaa);
+        assert_eq!(config.monitors[0].key(), "\\\\?\\DISPLAY#DEL42D3#UID100");
+
+        // The two identical Dells must not share a key, or naming one would
+        // name both.
+        assert_ne!(config.monitors[0].key(), config.monitors[2].key());
+    }
+
+    #[test]
     fn distinct_monitors_are_labelled_plainly() {
         let config = saved_config(0xaaa);
         assert_eq!(

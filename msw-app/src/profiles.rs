@@ -8,33 +8,70 @@
 //! settings window and the tooltip cannot drift out of step: each operation
 //! ends by refreshing the tray and telling the window to reload.
 
+use std::collections::BTreeMap;
+
 use tauri::{AppHandle, Emitter, Manager};
 
-use crate::state::{AppState, CurrentStatus, ProfileView};
+use crate::state::{AppState, CurrentStatus, MonitorView, ProfileView};
 use crate::tray;
 
 /// Event the settings window listens for to reload its list.
 pub const PROFILES_CHANGED: &str = "profiles-changed";
 
+/// The monitor nicknames, copied out so the settings lock is not held while
+/// rendering.
+pub fn nicknames(app: &AppHandle) -> BTreeMap<String, String> {
+    let state = app.state::<AppState>();
+    let settings = state.settings.lock().expect("settings mutex poisoned");
+    settings.monitor_names.clone()
+}
+
+/// One-line description of what a profile leaves switched on.
+///
+/// Recomputed from the stored configuration rather than read from the
+/// profile's `active_monitors` field, so a nickname assigned after the profile
+/// was saved still shows up.
+fn summarize(
+    profile: &msw_core::Profile,
+    nicknames: &BTreeMap<String, String>,
+) -> (String, Vec<String>) {
+    let labels = profile.config.active_monitor_labels_with(nicknames);
+    let summary = match labels.len() {
+        0 => "no active monitors".to_string(),
+        1 => labels[0].clone(),
+        n => format!("{n} monitors: {}", labels.join(", ")),
+    };
+    (summary, labels)
+}
+
 /// Read every profile, annotated for display.
 pub fn list(app: &AppHandle) -> Result<Vec<ProfileView>, String> {
     let state = app.state::<AppState>();
-    let profiles = state.store.list().map_err(|e| e.to_string())?;
+    tracing::info!(dir = %state.store.dir().display(), "listing profiles");
+    let profiles = state.store.list().map_err(|e| {
+        tracing::error!(error = %e, "could not list profiles");
+        e.to_string()
+    })?;
+    tracing::info!(count = profiles.len(), "profiles read");
 
     // A failure to read the current configuration should not stop the list
     // from rendering; it only means nothing can be marked as active.
     let current = msw_core::current_config().ok();
     let settings = state.settings.lock().expect("settings mutex poisoned");
+    let nicknames = settings.monitor_names.clone();
 
     Ok(profiles
         .into_iter()
-        .map(|p| ProfileView {
-            active: current.as_ref().is_some_and(|c| p.is_active(c)),
-            summary: p.summary(),
-            monitors: p.active_monitors.clone(),
-            saved_at: p.saved_at.clone(),
-            hotkey: settings.hotkeys.get(&p.name).cloned(),
-            name: p.name,
+        .map(|p| {
+            let (summary, monitors) = summarize(&p, &nicknames);
+            ProfileView {
+                active: current.as_ref().is_some_and(|c| p.is_active(c)),
+                summary,
+                monitors,
+                saved_at: p.saved_at.clone(),
+                hotkey: settings.hotkeys.get(&p.name).cloned(),
+                name: p.name,
+            }
         })
         .collect())
 }
@@ -43,18 +80,15 @@ pub fn list(app: &AppHandle) -> Result<Vec<ProfileView>, String> {
 pub fn current_status(app: &AppHandle) -> Result<CurrentStatus, String> {
     let state = app.state::<AppState>();
     let config = msw_core::current_config().map_err(|e| e.to_string())?;
+    let nicknames = nicknames(app);
 
-    let active_monitors = config.active_monitor_labels();
+    let active_monitors = config.active_monitor_labels_with(&nicknames);
 
     let inactive_monitors = config
         .monitors
         .iter()
-        .filter(|m| {
-            !config.paths.iter().any(|p| {
-                p.is_active() && p.target.id == m.id && p.target.adapter_id == m.adapter_id
-            })
-        })
-        .map(|m| m.label())
+        .filter(|m| !is_active(&config, m))
+        .map(|m| m.label_with(&nicknames))
         .collect();
 
     let matching_profile = state
@@ -70,6 +104,56 @@ pub fn current_status(app: &AppHandle) -> Result<CurrentStatus, String> {
         inactive_monitors,
         matching_profile,
     })
+}
+
+/// Is this monitor on an active path?
+fn is_active(config: &msw_core::DisplayConfig, monitor: &msw_core::MonitorInfo) -> bool {
+    config.paths.iter().any(|p| {
+        p.is_active() && p.target.id == monitor.id && p.target.adapter_id == monitor.adapter_id
+    })
+}
+
+/// Every monitor Windows currently knows about, for the nickname editor.
+pub fn list_monitors(app: &AppHandle) -> Result<Vec<MonitorView>, String> {
+    let config = msw_core::current_config().map_err(|e| e.to_string())?;
+    let nicknames = nicknames(app);
+
+    Ok(config
+        .monitors
+        .iter()
+        .map(|m| {
+            let active = is_active(&config, m);
+
+            // Resolution and position come from the source mode behind this
+            // monitor's active path. An inactive monitor has neither, which is
+            // fine: it is also the one the user is least able to identify.
+            let mode = config
+                .paths
+                .iter()
+                .find(|p| {
+                    p.is_active() && p.target.id == m.id && p.target.adapter_id == m.adapter_id
+                })
+                .and_then(|p| {
+                    config.modes.iter().find_map(|mode| match mode.mode {
+                        msw_core::model::ModeKind::Source(s)
+                            if mode.id == p.source.id && mode.adapter_id == p.source.adapter_id =>
+                        {
+                            Some(s)
+                        }
+                        _ => None,
+                    })
+                });
+
+            MonitorView {
+                key: m.key(),
+                model: m.label(),
+                nickname: nicknames.get(&m.key()).cloned(),
+                active,
+                resolution: mode.map(|s| format!("{}x{}", s.width, s.height)),
+                position: mode.map(|s| format!("{}, {}", s.position.x, s.position.y)),
+            }
+        })
+        .collect())
 }
 
 /// Which saved profile matches the screen right now, if any.

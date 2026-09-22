@@ -9,6 +9,7 @@
 //! switching works whether or not the tray app happens to be running, which is
 //! what makes it dependable as a Stream Deck target.
 
+use std::collections::BTreeMap;
 use std::process::ExitCode;
 
 use anyhow::{bail, Context, Result};
@@ -124,6 +125,37 @@ fn store(cli: &Cli) -> Result<Store> {
     }
 }
 
+/// Monitor nicknames, as set in the tray application.
+///
+/// Read straight from the settings file rather than shared through a library,
+/// because this is the only thing out here that cares about them. A missing or
+/// unreadable file simply means no nicknames, which leaves the model names in
+/// place: worth no more than a debug line, since the command still works.
+fn nicknames() -> BTreeMap<String, String> {
+    #[derive(serde::Deserialize, Default)]
+    struct JustTheNames {
+        #[serde(default)]
+        monitor_names: BTreeMap<String, String>,
+    }
+
+    let Some(appdata) = std::env::var_os("APPDATA") else {
+        return BTreeMap::new();
+    };
+    let path = std::path::Path::new(&appdata)
+        .join("ModernMonitorSwitcher")
+        .join("settings.json");
+
+    match std::fs::read_to_string(&path) {
+        Ok(text) => serde_json::from_str::<JustTheNames>(&text)
+            .map(|s| s.monitor_names)
+            .unwrap_or_else(|e| {
+                tracing::debug!(error = %e, "could not read monitor nicknames");
+                BTreeMap::new()
+            }),
+        Err(_) => BTreeMap::new(),
+    }
+}
+
 fn run(cli: &Cli) -> Result<()> {
     let store = store(cli)?;
 
@@ -162,9 +194,16 @@ fn list(store: &Store, json: bool) -> Result<()> {
         return Ok(());
     }
 
+    let nicknames = nicknames();
     let width = profiles.iter().map(|p| p.name.len()).max().unwrap_or(0);
     for profile in &profiles {
-        println!("{:width$}  {}", profile.name, profile.summary());
+        let labels = profile.config.active_monitor_labels_with(&nicknames);
+        let summary = match labels.len() {
+            0 => "no active monitors".to_string(),
+            1 => labels[0].clone(),
+            n => format!("{n} monitors: {}", labels.join(", ")),
+        };
+        println!("{:width$}  {}", profile.name, summary);
     }
     Ok(())
 }
@@ -177,14 +216,15 @@ fn current(json: bool) -> Result<()> {
         return Ok(());
     }
 
-    let active = config.active_monitors();
+    let nicknames = nicknames();
+    let active = config.active_monitor_labels_with(&nicknames);
     println!(
         "{} active of {} known display path(s):",
         active.len(),
         config.paths.len()
     );
-    for monitor in active {
-        println!("  * {}", monitor.label());
+    for label in &active {
+        println!("  * {label}");
     }
 
     let inactive: Vec<_> = config
@@ -201,7 +241,7 @@ fn current(json: bool) -> Result<()> {
         println!();
         println!("Connected but not in use:");
         for monitor in inactive {
-            println!("  - {}", monitor.label());
+            println!("  - {}", monitor.label_with(&nicknames));
         }
     }
 

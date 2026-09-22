@@ -10,6 +10,8 @@
 //! round-trip losslessly to and from the Win32 types (see `ccd.rs`), and the
 //! JSON they produce is stable and hand-editable.
 
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 
 /// Locally unique adapter identifier.
@@ -189,6 +191,29 @@ impl MonitorInfo {
             .filter(|n| !n.trim().is_empty())
             .unwrap_or_else(|| format!("Display {}", self.id))
     }
+
+    /// Stable key for this monitor, for anything that needs to remember
+    /// something about it across reboots.
+    ///
+    /// The device path encodes the EDID, so it survives reboots, adapter
+    /// renumbering and being moved to a different port. The fallback is only
+    /// reached for a monitor Windows would not name, and is not stable.
+    pub fn key(&self) -> String {
+        self.device_path
+            .clone()
+            .filter(|p| !p.trim().is_empty())
+            .unwrap_or_else(|| format!("{}:{}", self.adapter_id.low, self.id))
+    }
+
+    /// Label, preferring a user-assigned nickname.
+    pub fn label_with(&self, nicknames: &BTreeMap<String, String>) -> String {
+        nicknames
+            .get(&self.key())
+            .map(|n| n.trim())
+            .filter(|n| !n.is_empty())
+            .map(str::to_string)
+            .unwrap_or_else(|| self.label())
+    }
 }
 
 /// A complete display topology: what Windows hands back from
@@ -229,11 +254,20 @@ impl DisplayConfig {
     /// "DELL U2724D" tell the user nothing. Repeats get a numeric suffix in
     /// path order.
     pub fn active_monitor_labels(&self) -> Vec<String> {
+        self.active_monitor_labels_with(&BTreeMap::new())
+    }
+
+    /// As [`Self::active_monitor_labels`], preferring user-assigned nicknames.
+    ///
+    /// A nickname is the whole point of naming a monitor "Left": once one is
+    /// set there is nothing to disambiguate, so the numeric suffix applies
+    /// only to monitors still falling back on their model name.
+    pub fn active_monitor_labels_with(&self, nicknames: &BTreeMap<String, String>) -> Vec<String> {
         let monitors = self.active_monitors();
 
         let mut counts: Vec<(String, usize)> = Vec::new();
         for m in &monitors {
-            let label = m.label();
+            let label = m.label_with(nicknames);
             match counts.iter_mut().find(|(l, _)| *l == label) {
                 Some((_, n)) => *n += 1,
                 None => counts.push((label, 1)),
@@ -244,7 +278,7 @@ impl DisplayConfig {
         monitors
             .iter()
             .map(|m| {
-                let label = m.label();
+                let label = m.label_with(nicknames);
                 let total = counts
                     .iter()
                     .find(|(l, _)| *l == label)

@@ -13,6 +13,7 @@
     "dialog:allow-ask",
     "dialog:allow-message",
     "opener:allow-open-url",
+    "opener:allow-open-path",
     "autostart:default",
     "global-shortcut:default",
     "updater:default"
