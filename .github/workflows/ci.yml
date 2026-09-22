@@ -1,5 +1,18 @@
 name: CI
 
+# Deliberately fast. This checks msw-core and msw-cli, which hold all the
+# logic and all but a handful of the tests, and which together compile in
+# seconds because they depend on little more than the Windows crate.
+#
+# msw-app is not built here. It pulls in the whole Tauri dependency tree,
+# several hundred crates, and compiling that on every push costs many minutes
+# to tell us something a local build already told us. It is built when a tag
+# is pushed, by the release workflow, which has to build it anyway.
+#
+# The trade: a change that breaks only msw-app surfaces at release time rather
+# than on push. That is worth it at this size; if this ever grows more than one
+# developer, put msw-app back.
+
 on:
   push:
     branches: [main]
@@ -25,30 +38,13 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
+      # Formatting does not compile anything, so it covers the whole
+      # workspace including msw-app.
       - name: Check formatting
         run: cargo fmt --all -- --check
 
-      # msw-app declares msw.exe as a Tauri sidecar, and its build script fails
-      # if the file is not there. So this has to come before anything that
-      # compiles the workspace, including clippy and the tests.
-      #
-      # A debug build is enough: nothing here ships, the file only has to
-      # exist and be a real executable. Building it in release would compile a
-      # second copy of the dependency tree for no benefit.
-      - name: Build and stage the CLI sidecar
-        run: |
-          cargo build -p msw-cli
-          New-Item -ItemType Directory -Force -Path msw-app/binaries | Out-Null
-          Copy-Item target/debug/msw.exe msw-app/binaries/msw-x86_64-pc-windows-msvc.exe
-
       - name: Clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        run: cargo clippy -p msw-core -p msw-cli --all-targets -- -D warnings
 
       - name: Test
-        run: cargo test --workspace
-
-      # Deliberately no release build here. It would mean compiling the whole
-      # Tauri tree again under a different profile, for several minutes, to
-      # catch the rare failure that only the release profile provokes. The
-      # release workflow does a real release build when a tag is pushed, which
-      # is early enough.
+        run: cargo test -p msw-core -p msw-cli
