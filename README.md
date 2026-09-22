@@ -38,6 +38,12 @@ is no such stream, so nothing warns. Updates after the first install do not
 warn either: the updater writes its download directly rather than through a
 browser.
 
+It installs per-user, into `%LOCALAPPDATA%\ModernMonitorSwitcher`, rather than
+into Program Files. That is deliberate: a per-user install needs no
+administrator rights, which means updates can install themselves without
+putting a UAC prompt in your way every time. The cost is that it is installed
+for one Windows account rather than the whole machine.
+
 ## Use
 
 Arrange your monitors however you want them using the normal Windows display
@@ -94,12 +100,21 @@ whether Windows would accept the profile, and by which matching strategy,
 without touching the screen. Most failures mean a monitor the profile expects
 is not connected.
 
-**Something else.** Run with logging on to see what it is doing:
+**Something else.** The tray application writes a log to
+`%APPDATA%\ModernMonitorSwitcher\msw.log`. It is the first place to look, and
+worth attaching to a bug report.
+
+For the command line, turn logging up with an environment variable:
 
 ```
 set MSW_LOG=debug
 msw apply "Work"
 ```
+
+The same variable raises the tray application's logging; it accepts anything
+[`tracing`](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html)
+understands, so `debug` covers everything and `ModernMonitorSwitcher=debug`
+covers only this application.
 
 ## How it works
 
