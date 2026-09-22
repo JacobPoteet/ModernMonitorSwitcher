@@ -47,12 +47,12 @@ fn summarize(
 /// Read every profile, annotated for display.
 pub fn list(app: &AppHandle) -> Result<Vec<ProfileView>, String> {
     let state = app.state::<AppState>();
-    tracing::info!(dir = %state.store.dir().display(), "listing profiles");
+    tracing::debug!(dir = %state.store.dir().display(), "listing profiles");
     let profiles = state.store.list().map_err(|e| {
         tracing::error!(error = %e, "could not list profiles");
         e.to_string()
     })?;
-    tracing::info!(count = profiles.len(), "profiles read");
+    tracing::debug!(count = profiles.len(), "profiles read");
 
     // A failure to read the current configuration should not stop the list
     // from rendering; it only means nothing can be marked as active.

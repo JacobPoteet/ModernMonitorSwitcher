@@ -66,26 +66,6 @@ pub fn rename_profile(app: AppHandle, from: String, to: String) -> Result<(), St
     profiles::rename(&app, &from, &to)
 }
 
-/// Check whether a profile would apply, changing nothing on screen.
-#[tauri::command]
-pub fn preflight_profile(app: AppHandle, name: String) -> Result<Vec<String>, String> {
-    let state = app.state::<AppState>();
-    let profile = state.store.load(&name).map_err(|e| e.to_string())?;
-
-    let options = msw_core::preflight_profile(&profile).map_err(|e| e.to_string())?;
-
-    Ok(options
-        .into_iter()
-        .map(|(strategy, lenient)| {
-            let mut text = strategy.describe().to_string();
-            if lenient {
-                text.push_str(" (Windows would adjust some settings)");
-            }
-            text
-        })
-        .collect())
-}
-
 /// Every monitor Windows knows about, with its nickname if it has one.
 #[tauri::command]
 pub fn list_monitors(app: AppHandle) -> Result<Vec<crate::state::MonitorView>, String> {
@@ -204,18 +184,6 @@ pub fn set_autostart(app: AppHandle, enabled: bool) -> Result<(), String> {
 #[tauri::command]
 pub async fn check_for_update(app: AppHandle) -> Result<UpdateStatus, String> {
     crate::updater::check(&app).await
-}
-
-#[tauri::command]
-pub async fn install_update(app: AppHandle) -> Result<(), String> {
-    crate::updater::install(&app).await
-}
-
-#[tauri::command]
-pub fn monitors_off() {
-    // The broadcast blocks until every top-level window has handled it, so it
-    // must not run on the thread serving this command.
-    std::thread::spawn(msw_core::power::all_monitors_off);
 }
 
 /// Restore whatever layout Windows remembers for the monitors connected now.
