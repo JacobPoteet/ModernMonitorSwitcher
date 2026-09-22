@@ -65,15 +65,17 @@ jobs:
 
           Write-Host "Building $tag."
 
-      - name: Test
-        run: cargo test --workspace
-
+      # Must precede the tests: msw-app declares msw.exe as a sidecar, and its
+      # build script fails if the file is not there.
       - name: Build and stage the CLI sidecar
         shell: pwsh
         run: |
           cargo build --release -p msw-cli
           New-Item -ItemType Directory -Force -Path msw-app/binaries | Out-Null
           Copy-Item target/release/msw.exe msw-app/binaries/msw-x86_64-pc-windows-msvc.exe
+
+      - name: Test
+        run: cargo test --workspace
 
       - name: Build the installer and publish the release
         uses: tauri-apps/tauri-action@v0

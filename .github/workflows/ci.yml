@@ -28,19 +28,20 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
 
+      # msw-app declares msw.exe as a Tauri sidecar, and its build script fails
+      # if the file is not there. So this has to come before anything that
+      # compiles the workspace, including clippy and the tests.
+      - name: Build and stage the CLI sidecar
+        run: |
+          cargo build --release -p msw-cli
+          New-Item -ItemType Directory -Force -Path msw-app/binaries | Out-Null
+          Copy-Item target/release/msw.exe msw-app/binaries/msw-x86_64-pc-windows-msvc.exe
+
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
 
       - name: Test
         run: cargo test --workspace
-
-      # Building the app crate needs the sidecar to exist, even though the
-      # installer itself is only built on release.
-      - name: Stage the CLI sidecar
-        run: |
-          cargo build --release -p msw-cli
-          New-Item -ItemType Directory -Force -Path msw-app/binaries | Out-Null
-          Copy-Item target/release/msw.exe msw-app/binaries/msw-x86_64-pc-windows-msvc.exe
 
       - name: Build
         run: cargo build --workspace --release
