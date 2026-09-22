@@ -144,9 +144,20 @@ Needs [Rust](https://rustup.rs) and, for the installer, the
 
 ```bash
 cargo test --workspace          # unit tests, no hardware needed
-cargo build --release           # binaries
+cargo build -p msw-app          # the tray app, for working on it
 pwsh tools/build-release.ps1    # the NSIS installer
 ```
+
+Work against a debug build. `target/debug/ModernMonitorSwitcher.exe` is the
+same application and rebuilds in about five seconds after a change, against
+roughly forty for a release build and a couple of minutes to produce an
+installer. Build the installer when you are testing installing or updating,
+not to try out a change.
+
+The release profile uses thin LTO rather than full. Full LTO with a single
+codegen unit saved about 0.9 MB and cost two minutes on every rebuild, which
+is the wrong way round for a desktop application that ships an installer over
+the internet a few times a year.
 
 The layout:
 
