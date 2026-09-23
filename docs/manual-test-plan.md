@@ -26,6 +26,21 @@ Know the escape hatch. If a profile leaves the displays unusable:
 - [ ] The tray icon is legible against the taskbar, in both light and dark
       Windows themes.
 
+### First-run guide
+
+On a machine with no `%APPDATA%\ModernMonitorSwitcher` folder:
+
+- [ ] The settings window opens on the guide.
+- [ ] **Open display settings** opens the Display page of Windows Settings.
+- [ ] Disconnecting a display in Windows updates the guide's preview within
+      a couple of seconds, without clicking back into the window.
+- [ ] Saving from the guide creates the profile and shows the final page;
+      pressing Enter to save does not skip past it.
+- [ ] After **Done** or **Skip**, reopening the window does not show the
+      guide again. **Show setup guide** in Settings brings it back.
+- [ ] Upgrading an install that already has profiles does not show the
+      guide.
+
 ## 2. Capturing profiles
 
 With every monitor on:

@@ -51,6 +51,11 @@ pub async fn check(app: &AppHandle) -> Result<UpdateStatus, String> {
 
 /// Download and install, then restart into the new version.
 pub async fn install(app: &AppHandle) -> Result<(), String> {
+    // The installer would replace the real copy, not this one.
+    if crate::state::is_sandbox() {
+        return Err("Updates cannot be installed from the sandbox.".to_string());
+    }
+
     let updater = app.updater().map_err(|e| e.to_string())?;
     let Some(update) = updater.check().await.map_err(|e| e.to_string())? else {
         return Err("There is no update to install.".to_string());

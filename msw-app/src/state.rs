@@ -12,6 +12,16 @@ use serde::Serialize;
 
 use crate::settings::Settings;
 
+/// Running from `tools/run-sandbox.ps1` rather than as the installed copy.
+///
+/// The script points `%APPDATA%` at a scratch folder, which already keeps
+/// settings, profiles and the log away from the real ones. This covers what
+/// does not live there: the single-instance lock, the Run key autostart
+/// writes, and the updater, which installs over the real copy.
+pub fn is_sandbox() -> bool {
+    std::env::var_os("MSW_SANDBOX").is_some_and(|v| !v.is_empty())
+}
+
 /// Set when the user has actually asked to quit.
 ///
 /// The exit handler otherwise vetoes every exit, because hiding the last

@@ -45,6 +45,9 @@ function prettyAccelerator(accelerator) {
 }
 
 function renderStatus(status) {
+  lastStatus = status;
+  renderGuideLive();
+
   const monitors = status.active_monitors;
   $("status-monitors").textContent = monitors.length
     ? monitors.join(", ")
@@ -70,7 +73,15 @@ function renderProfiles(profiles) {
     const empty = document.createElement("div");
     empty.className = "empty";
     empty.textContent =
-      "No profiles yet. Arrange your monitors how you like them, then save the layout.";
+      "No profiles yet. Arrange your monitors how you like them, then save the layout. ";
+    const guide = document.createElement("a");
+    guide.href = "#";
+    guide.textContent = "Walk me through it";
+    guide.addEventListener("click", (event) => {
+      event.preventDefault();
+      openGuide();
+    });
+    empty.append(guide);
     container.append(empty);
     return;
   }
@@ -138,7 +149,9 @@ function renderMonitors(monitors) {
   const container = $("monitors");
   container.replaceChildren();
 
-  renderMonitorLayout(monitors);
+  lastMonitors = monitors;
+  renderMonitorLayout($("monitor-layout"), monitors);
+  renderGuideLive();
 
   if (!monitors.length) {
     const empty = document.createElement("div");
@@ -174,8 +187,7 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 /// A miniature top-down map of the desktop, one rectangle per active
 /// monitor at its real relative position and aspect ratio — the same idea
 /// as the arrangement diagram in Windows' own Display Settings.
-function renderMonitorLayout(monitors) {
-  const box = $("monitor-layout");
+function renderMonitorLayout(box, monitors) {
   const placed = placedMonitors(monitors);
 
   if (placed.length < 1) {
@@ -539,6 +551,176 @@ async function setHotkey(accelerator) {
 }
 
 // ---------------------------------------------------------------------------
+// First-run guide
+// ---------------------------------------------------------------------------
+
+// The most recent reads, so the guide can show what is on screen without
+// asking Windows again.
+let lastStatus = null;
+let lastMonitors = [];
+
+const GUIDE_ARRANGE = 1;
+const GUIDE_SAVE = 2;
+const GUIDE_DONE = 3;
+
+let guideStep = 0;
+let guidePoll = null;
+
+function guideOpen() {
+  return !$("guide").hidden;
+}
+
+function openGuide() {
+  $("guide-name").value = "";
+  $("guide-error").textContent = "";
+  $("guide").hidden = false;
+  showGuideStep(0);
+}
+
+/// Close the guide and remember not to open it again on its own.
+///
+/// Skipping counts the same as finishing: someone who dismissed it once does
+/// not want it back every launch, and it is one click away in Settings.
+function closeGuide() {
+  $("guide").hidden = true;
+  stopGuidePoll();
+  invoke("set_onboarding_complete", { complete: true }).catch((e) =>
+    console.warn("could not record that the guide was seen", e),
+  );
+}
+
+function showGuideStep(step) {
+  guideStep = step;
+
+  document.querySelectorAll(".guide-page").forEach((page) => {
+    page.hidden = Number(page.dataset.step) !== step;
+  });
+  document.querySelectorAll(".guide-steps li").forEach((item, i) => {
+    item.className = i < step ? "is-done" : i === step ? "is-current" : "";
+  });
+
+  const next = $("guide-next");
+  next.disabled = false;
+  next.textContent = ["Get started", "It looks right", "Save profile", "Done"][step];
+  $("guide-back").hidden = step === 0 || step === GUIDE_DONE;
+  $("guide-skip").hidden = step === GUIDE_DONE;
+
+  // Windows does not tell this window when the arrangement changes, and
+  // Display settings is usually beside it rather than on top, so the focus
+  // refresh alone would leave the preview stale while the user works.
+  if (step === GUIDE_ARRANGE) {
+    startGuidePoll();
+  } else {
+    stopGuidePoll();
+  }
+
+  renderGuideLive();
+
+  if (step === GUIDE_SAVE) {
+    $("guide-name").focus();
+  } else {
+    next.focus();
+  }
+}
+
+function startGuidePoll() {
+  stopGuidePoll();
+  refresh();
+  guidePoll = setInterval(refresh, 2000);
+}
+
+function stopGuidePoll() {
+  clearInterval(guidePoll);
+  guidePoll = null;
+}
+
+function renderGuideLive() {
+  if (!guideOpen()) return;
+
+  const names = lastStatus?.active_monitors ?? [];
+  const described = names.length ? names.join(", ") : "No monitors active";
+
+  if (guideStep === GUIDE_ARRANGE) {
+    renderMonitorLayout($("guide-layout"), lastMonitors);
+    $("guide-monitors").textContent = described;
+  }
+
+  if (guideStep === GUIDE_SAVE) {
+    $("guide-summary").textContent = lastStatus?.matching_profile
+      ? `This is the same as your ${lastStatus.matching_profile} profile. Saving under a new name adds a second copy.`
+      : `Will save: ${described}`;
+  }
+}
+
+async function guideNext() {
+  if (guideStep === GUIDE_SAVE) {
+    await guideSave();
+    return;
+  }
+  if (guideStep === GUIDE_DONE) {
+    closeGuide();
+    return;
+  }
+  showGuideStep(guideStep + 1);
+}
+
+async function guideSave() {
+  const name = $("guide-name").value.trim();
+  if (!name) {
+    $("guide-error").textContent = "Enter a name.";
+    $("guide-name").focus();
+    return;
+  }
+
+  const next = $("guide-next");
+  next.disabled = true;
+  $("guide-error").textContent = "";
+  try {
+    try {
+      await invoke("save_profile", { name, overwrite: false });
+    } catch (e) {
+      if (!String(e).includes("already exists")) throw e;
+      if (!window.confirm(`Replace the existing "${name}" profile?`)) return;
+      await invoke("save_profile", { name, overwrite: true });
+    }
+    $("guide-done-title").textContent = `${name} is saved`;
+    showGuideStep(GUIDE_DONE);
+    await refresh();
+  } catch (e) {
+    $("guide-error").textContent = String(e);
+  } finally {
+    next.disabled = false;
+  }
+}
+
+function wireGuide() {
+  $("guide-next").addEventListener("click", guideNext);
+  $("guide-back").addEventListener("click", () => showGuideStep(Math.max(0, guideStep - 1)));
+  $("guide-skip").addEventListener("click", closeGuide);
+  $("show-guide").addEventListener("click", openGuide);
+
+  $("guide-open-display").addEventListener("click", () => {
+    invoke("open_display_settings").catch((e) => toast(String(e), "error"));
+  });
+
+  $("guide-name").addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    // Saving moves focus to the Done button; without this the same key press
+    // goes on to click it and closes the guide before its last page is read.
+    event.preventDefault();
+    guideSave();
+  });
+
+  $("guide").addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    // Otherwise the document handler sees the guide already closed and hides
+    // the whole window as well.
+    event.stopPropagation();
+    closeGuide();
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Settings
 // ---------------------------------------------------------------------------
 
@@ -546,6 +728,7 @@ async function loadSettings() {
   try {
     const settings = await invoke("get_settings");
     $("check-updates").checked = settings.check_for_updates;
+    if (!settings.onboarding_complete) openGuide();
   } catch (e) {
     toast(String(e), "error");
   }
@@ -667,7 +850,7 @@ function wire() {
   // Escape closes the window, matching how tray applications usually behave.
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
-    if (!$("name-dialog").hidden || !$("hotkey-dialog").hidden) return;
+    if (!$("name-dialog").hidden || !$("hotkey-dialog").hidden || guideOpen()) return;
     invoke("hide_window");
   });
 
@@ -679,5 +862,6 @@ function wire() {
 }
 
 wire();
+wireGuide();
 loadSettings();
 refresh();

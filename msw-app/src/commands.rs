@@ -180,6 +180,34 @@ pub fn set_check_for_updates(app: AppHandle, enabled: bool) {
     app.state::<AppState>().save_settings();
 }
 
+/// Record that the first-run guide is done, or clear it to show it again.
+#[tauri::command]
+pub fn set_onboarding_complete(app: AppHandle, complete: bool) {
+    {
+        let state = app.state::<AppState>();
+        let mut settings = state.settings.lock().expect("settings mutex poisoned");
+        settings.onboarding_complete = complete;
+    }
+    app.state::<AppState>().save_settings();
+}
+
+/// Open the Display page of Windows Settings, where the arrangement a profile
+/// captures is actually made.
+///
+/// Goes through Explorer for the same reason `open_profiles_folder` does, and
+/// the URI is fixed here so the page cannot ask for anything else.
+#[tauri::command]
+pub fn open_display_settings() -> Result<(), String> {
+    std::process::Command::new("explorer")
+        .arg("ms-settings:display")
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| {
+            tracing::error!(error = %e, "could not open Display settings");
+            format!("Could not open Display settings: {e}")
+        })
+}
+
 #[tauri::command]
 pub fn get_autostart(app: AppHandle) -> Result<bool, String> {
     app.autolaunch().is_enabled().map_err(|e| e.to_string())
@@ -187,6 +215,12 @@ pub fn get_autostart(app: AppHandle) -> Result<bool, String> {
 
 #[tauri::command]
 pub fn set_autostart(app: AppHandle, enabled: bool) -> Result<(), String> {
+    // The Run key entry is shared with the installed copy, so a sandbox
+    // toggling it would change what really starts at login.
+    if crate::state::is_sandbox() {
+        return Err("Start with Windows is disabled in the sandbox.".to_string());
+    }
+
     let manager = app.autolaunch();
     if enabled {
         manager.enable().map_err(|e| e.to_string())
