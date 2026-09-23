@@ -14,9 +14,15 @@
     strips it on install, so `msw-x86_64-pc-windows-msvc.exe` is installed as
     `msw.exe`.
 
-    Signing the update artifacts needs TAURI_SIGNING_PRIVATE_KEY set. Without
-    it the installer still builds, but the result cannot be published as an
-    update because the updater will refuse an unsigned package.
+    Signing the update artifacts needs TAURI_SIGNING_PRIVATE_KEY set. If it
+    isn't already in the environment, this falls back to reading it from
+    %USERPROFILE%\.tauri\msw-updater.key. Without either, the installer still
+    builds, but the result cannot be published as an update because the
+    updater will refuse an unsigned package.
+
+    The key has no password, but `tauri build` still stops to prompt for one
+    interactively unless told not to, which would hang a non-interactive
+    build; `--ci` skips that prompt.
 #>
 
 $ErrorActionPreference = "Stop"
@@ -38,11 +44,16 @@ try {
         -Destination (Join-Path $binaries "msw-$triple.exe")
 
     if (-not $env:TAURI_SIGNING_PRIVATE_KEY) {
-        Write-Warning "TAURI_SIGNING_PRIVATE_KEY is not set; update artifacts will not be signed."
+        $keyFile = Join-Path $env:USERPROFILE ".tauri\msw-updater.key"
+        if (Test-Path $keyFile) {
+            $env:TAURI_SIGNING_PRIVATE_KEY = Get-Content $keyFile -Raw
+        } else {
+            Write-Warning "TAURI_SIGNING_PRIVATE_KEY is not set; update artifacts will not be signed."
+        }
     }
 
     Write-Host "Building the installer..." -ForegroundColor Cyan
-    npx --yes @tauri-apps/cli@^2 build --config msw-app/tauri.conf.json
+    npx --yes @tauri-apps/cli@^2 build --config msw-app/tauri.conf.json --ci
     if ($LASTEXITCODE -ne 0) { throw "tauri build failed" }
 
     $bundle = Join-Path $root "target/release/bundle/nsis"
