@@ -202,8 +202,10 @@ h3 {
 /* --- Monitors ----------------------------------------------------------- */
 
 .hint {
+  display: block;
   color: var(--text-muted);
   font-size: 12px;
+  margin-bottom: 12px;
 }
 
 .monitors {

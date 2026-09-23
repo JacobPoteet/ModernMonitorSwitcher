@@ -113,6 +113,33 @@ fn is_active(config: &msw_core::DisplayConfig, monitor: &msw_core::MonitorInfo) 
     })
 }
 
+/// The source mode behind an active monitor's path — its resolution and its
+/// position in the virtual desktop.
+///
+/// An inactive monitor has none, which is fine: it is also the one the user
+/// is least able to identify.
+fn active_mode(
+    config: &msw_core::DisplayConfig,
+    monitor: &msw_core::MonitorInfo,
+) -> Option<msw_core::model::SourceMode> {
+    config
+        .paths
+        .iter()
+        .find(|p| {
+            p.is_active() && p.target.id == monitor.id && p.target.adapter_id == monitor.adapter_id
+        })
+        .and_then(|p| {
+            config.modes.iter().find_map(|mode| match mode.mode {
+                msw_core::model::ModeKind::Source(s)
+                    if mode.id == p.source.id && mode.adapter_id == p.source.adapter_id =>
+                {
+                    Some(s)
+                }
+                _ => None,
+            })
+        })
+}
+
 /// Every monitor Windows currently knows about, for the nickname editor.
 pub fn list_monitors(app: &AppHandle) -> Result<Vec<MonitorView>, String> {
     let config = msw_core::current_config().map_err(|e| e.to_string())?;
@@ -123,26 +150,7 @@ pub fn list_monitors(app: &AppHandle) -> Result<Vec<MonitorView>, String> {
         .iter()
         .map(|m| {
             let active = is_active(&config, m);
-
-            // Resolution and position come from the source mode behind this
-            // monitor's active path. An inactive monitor has neither, which is
-            // fine: it is also the one the user is least able to identify.
-            let mode = config
-                .paths
-                .iter()
-                .find(|p| {
-                    p.is_active() && p.target.id == m.id && p.target.adapter_id == m.adapter_id
-                })
-                .and_then(|p| {
-                    config.modes.iter().find_map(|mode| match mode.mode {
-                        msw_core::model::ModeKind::Source(s)
-                            if mode.id == p.source.id && mode.adapter_id == p.source.adapter_id =>
-                        {
-                            Some(s)
-                        }
-                        _ => None,
-                    })
-                });
+            let mode = active_mode(&config, m);
 
             MonitorView {
                 key: m.key(),
@@ -152,6 +160,42 @@ pub fn list_monitors(app: &AppHandle) -> Result<Vec<MonitorView>, String> {
                 resolution: mode.map(|s| format!("{}x{}", s.width, s.height)),
                 position: mode.map(|s| format!("{}, {}", s.position.x, s.position.y)),
             }
+        })
+        .collect())
+}
+
+/// Where to put an "Identify" overlay for one active monitor, and what it
+/// should say.
+pub struct IdentifyTarget {
+    pub label: String,
+    pub x: i32,
+    pub y: i32,
+    pub width: u32,
+    pub height: u32,
+}
+
+/// Geometry and label for every active monitor, for the Identify overlay.
+///
+/// Labels reuse [`msw_core::DisplayConfig::active_monitor_labels_with`], so
+/// the number an overlay shows is the same one the settings window would
+/// disambiguate two identically named monitors with.
+pub fn identify_targets(app: &AppHandle) -> Result<Vec<IdentifyTarget>, String> {
+    let config = msw_core::current_config().map_err(|e| e.to_string())?;
+    let nicknames = nicknames(app);
+    let labels = config.active_monitor_labels_with(&nicknames);
+
+    Ok(config
+        .active_monitors()
+        .into_iter()
+        .zip(labels)
+        .filter_map(|(m, label)| {
+            active_mode(&config, m).map(|mode| IdentifyTarget {
+                label,
+                x: mode.position.x,
+                y: mode.position.y,
+                width: mode.width,
+                height: mode.height,
+            })
         })
         .collect())
 }

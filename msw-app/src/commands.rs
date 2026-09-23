@@ -106,6 +106,20 @@ pub fn set_monitor_name(
     Ok(())
 }
 
+/// Show a label naming each active monitor, like the "Identify" button in
+/// Windows' own Display Settings.
+///
+/// Must be `async`: a plain command runs on the same thread that pumps this
+/// window's own WebView2 message loop, and creating a *new* WebView2-backed
+/// window synchronously from there deadlocks waiting on that same loop to
+/// process messages it cannot reach. `async` hands the command to Tauri's
+/// async runtime instead, which creates windows via its normal cross-thread
+/// proxy to the main loop.
+#[tauri::command]
+pub async fn identify_monitors(app: AppHandle) -> Result<(), String> {
+    crate::identify::show(&app)
+}
+
 #[tauri::command]
 pub fn get_settings(app: AppHandle) -> Settings {
     let state = app.state::<AppState>();
