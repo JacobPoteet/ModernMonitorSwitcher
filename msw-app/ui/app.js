@@ -507,6 +507,19 @@ async function checkForUpdates(button) {
 function wire() {
   $("save-new").addEventListener("click", openSaveDialog);
 
+  $("identify-monitors").addEventListener("click", async (event) => {
+    event.target.disabled = true;
+    try {
+      await invoke("identify_monitors");
+    } catch (e) {
+      toast(String(e), "error");
+    } finally {
+      setTimeout(() => {
+        event.target.disabled = false;
+      }, 1000);
+    }
+  });
+
   $("name-cancel").addEventListener("click", closeNameDialog);
   $("name-confirm").addEventListener("click", submitNameDialog);
   $("name-input").addEventListener("keydown", (event) => {

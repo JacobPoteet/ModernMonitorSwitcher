@@ -30,7 +30,7 @@ time. Choose **More info** then **Run anyway**. Two ways to avoid that:
 - Unblock the file first — right-click the download, **Properties**, tick
   **Unblock**. Or `Unblock-File .\ModernMonitorSwitcher_*_x64-setup.exe`.
 - Or build and install from a checkout, which never involves a download at
-  all: `pwsh tools/install-local.ps1`.
+  all: `powershell -ExecutionPolicy Bypass -File tools/install-local.ps1`.
 
 SmartScreen only inspects files carrying a Mark-of-the-Web, which is the NTFS
 stream a browser attaches to things it downloads. Either approach means there
@@ -144,8 +144,11 @@ Needs [Rust](https://rustup.rs) and, for the installer, the
 
 ```bash
 cargo test --workspace          # unit tests, no hardware needed
-cargo build -p msw-app          # the tray app, for working on it
-pwsh tools/build-release.ps1    # the NSIS installer
+cargo run                       # build and launch the tray app, for working on it
+
+# Windows ships powershell.exe (5.1); these scripts don't need pwsh (7).
+powershell -ExecutionPolicy Bypass -File tools/install-local.ps1  # build the installer and install it
+powershell -ExecutionPolicy Bypass -File tools/build-release.ps1  # just build the installer, without installing it
 ```
 
 Work against a debug build. `target/debug/ModernMonitorSwitcher.exe` is the

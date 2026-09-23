@@ -1,0 +1,50 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/* One of these covers each active monitor, full-screen and transparent
+   except for the label card, so nothing else on screen is obscured. */
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.label {
+  max-width: 80vw;
+  padding: 28px 48px;
+  border-radius: 20px;
+  background: rgba(20, 22, 26, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  color: #ffffff;
+  font-size: 64px;
+  font-weight: 600;
+  text-align: center;
+  overflow-wrap: break-word;
+  animation: identify-in 140ms ease-out;
+}
+
+@keyframes identify-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

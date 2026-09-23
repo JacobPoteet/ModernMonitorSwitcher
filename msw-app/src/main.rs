@@ -8,6 +8,7 @@
 
 mod commands;
 mod hotkeys;
+mod identify;
 mod profiles;
 mod settings;
 mod state;
@@ -61,6 +62,7 @@ fn main() {
             commands::rename_profile,
             commands::list_monitors,
             commands::set_monitor_name,
+            commands::identify_monitors,
             commands::get_settings,
             commands::set_hotkey,
             commands::set_check_for_updates,
@@ -111,8 +113,14 @@ fn main() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            // Closing the window hides it. Quitting is done from the tray, so
-            // the application stays available after the window is dismissed.
+            // Only the settings window hides instead of closing, so the
+            // application stays available after it is dismissed. Other
+            // windows — the identify overlays — must be free to actually
+            // close, or `.close()` would just hide them and leak one set on
+            // every use.
+            if window.label() != window::MAIN {
+                return;
+            }
             if let WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
                 let _ = window.hide();
