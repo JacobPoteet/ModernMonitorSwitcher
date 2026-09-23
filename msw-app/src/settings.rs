@@ -26,6 +26,10 @@ pub struct Settings {
     /// The device path encodes the EDID, so a nickname follows its monitor
     /// across reboots and between ports.
     pub monitor_names: BTreeMap<String, String>,
+
+    /// The first-run guide has been finished or dismissed, so the settings
+    /// window should open straight to the profiles.
+    pub onboarding_complete: bool,
 }
 
 impl Default for Settings {
@@ -34,6 +38,7 @@ impl Default for Settings {
             hotkeys: BTreeMap::new(),
             check_for_updates: true,
             monitor_names: BTreeMap::new(),
+            onboarding_complete: false,
         }
     }
 }
@@ -110,6 +115,7 @@ mod tests {
             "updating quietly is the point of this rewrite"
         );
         assert!(s.hotkeys.is_empty());
+        assert!(!s.onboarding_complete, "a new install gets the guide");
     }
 
     #[test]
@@ -156,6 +162,7 @@ mod tests {
             "missing fields should fall back to the default"
         );
         assert!(s.hotkeys.is_empty());
+        assert!(!s.onboarding_complete);
 
         fs::remove_file(&path).ok();
     }

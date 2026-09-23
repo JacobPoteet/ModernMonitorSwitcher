@@ -50,6 +50,9 @@ Arrange your monitors however you want them using the normal Windows display
 settings, then open Modern Monitor Switcher and choose **Save current layout**.
 Give it a name — `Work` and `Play`, say. Repeat for each arrangement.
 
+The first time it opens, a short guide walks through this. **Show setup
+guide** in Settings brings it back.
+
 After that, switching is one click in the tray menu.
 
 **Start with Windows** is in the settings window. Turn it on once and the
@@ -147,6 +150,7 @@ cargo test --workspace          # unit tests, no hardware needed
 cargo run                       # build and launch the tray app, for working on it
 
 # Windows ships powershell.exe (5.1); these scripts don't need pwsh (7).
+powershell -ExecutionPolicy Bypass -File tools/run-sandbox.ps1    # run it with throwaway settings, beside an installed copy
 powershell -ExecutionPolicy Bypass -File tools/install-local.ps1  # build the installer and install it
 powershell -ExecutionPolicy Bypass -File tools/build-release.ps1  # just build the installer, without installing it
 ```
@@ -156,6 +160,13 @@ same application and rebuilds in about five seconds after a change, against
 roughly forty for a release build and a couple of minutes to produce an
 installer. Build the installer when you are testing installing or updating,
 not to try out a change.
+
+`cargo run` uses your real settings and profiles, and quietly hands over to
+an installed copy if one is running. `tools/run-sandbox.ps1` does neither: it
+runs the debug build against an empty scratch folder, so it opens on the
+first-run guide every time (`-Keep` carries the last run's data over). It
+will not change Start with Windows or install updates. Switching profiles
+still changes your real displays.
 
 The release profile uses thin LTO rather than full. Full LTO with a single
 codegen unit saved about 0.9 MB and cost two minutes on every rebuild, which

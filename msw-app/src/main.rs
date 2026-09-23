@@ -30,15 +30,28 @@ const ARG_MINIMIZED: &str = "--minimized";
 fn main() {
     init_logging();
 
-    tauri::Builder::default()
-        // Must be first: it takes effect before the rest of the application
-        // starts, so a second launch never gets as far as a second tray icon.
-        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+    let sandbox = state::is_sandbox();
+    if sandbox {
+        tracing::info!("running as a sandbox; settings and profiles are not the real ones");
+    }
+
+    let mut builder = tauri::Builder::default();
+
+    // Must be first: it takes effect before the rest of the application
+    // starts, so a second launch never gets as far as a second tray icon.
+    //
+    // Left out of a sandbox, which shares the installed copy's identifier and
+    // would otherwise just hand itself over to it and exit.
+    if !sandbox {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             tracing::info!(?argv, "second instance; focusing the existing one");
             // A second launch means the user tried to start the app again,
             // so show them the window they were looking for.
             window::show(app);
-        }))
+        }));
+    }
+
+    builder
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
             Some(vec![ARG_MINIMIZED]),
@@ -66,6 +79,8 @@ fn main() {
             commands::get_settings,
             commands::set_hotkey,
             commands::set_check_for_updates,
+            commands::set_onboarding_complete,
+            commands::open_display_settings,
             commands::get_autostart,
             commands::set_autostart,
             commands::check_for_update,
@@ -75,7 +90,7 @@ fn main() {
             commands::app_version,
             commands::hide_window,
         ])
-        .setup(|app| {
+        .setup(move |app| {
             let handle = app.handle().clone();
             app.manage(AppState::new());
             app.manage(QuitFlag::default());
@@ -83,6 +98,7 @@ fn main() {
             // Drop hotkey bindings for profiles that no longer exist, which
             // would otherwise hold an accelerator for nothing.
             prune_stale_hotkeys(&handle);
+            skip_onboarding_for_existing_users(&handle);
 
             tray::create(&handle)?;
             hotkeys::reregister(&handle);
@@ -100,8 +116,14 @@ fn main() {
                 let settings = state.settings.lock().expect("settings mutex poisoned");
                 settings.check_for_updates
             };
-            if check_updates {
+            if check_updates && !sandbox {
                 updater::check_quietly(&handle);
+            }
+
+            if sandbox {
+                if let Some(window) = handle.get_webview_window(window::MAIN) {
+                    let _ = window.set_title("Modern Monitor Switcher (sandbox)");
+                }
             }
 
             // Show the window on a normal launch, but not when Windows started
@@ -157,6 +179,30 @@ fn prune_stale_hotkeys(app: &tauri::AppHandle) {
 
     if changed {
         tracing::info!("removed hotkeys for profiles that no longer exist");
+        state.save_settings();
+    }
+}
+
+/// Someone upgrading from a version without the first-run guide already has
+/// profiles and does not need to be taught how to make one.
+fn skip_onboarding_for_existing_users(app: &tauri::AppHandle) {
+    let state = app.state::<AppState>();
+
+    let has_profiles = state
+        .store
+        .list_names()
+        .is_ok_and(|names| !names.is_empty());
+
+    let changed = {
+        let mut settings = state.settings.lock().expect("settings mutex poisoned");
+        let changed = has_profiles && !settings.onboarding_complete;
+        if changed {
+            settings.onboarding_complete = true;
+        }
+        changed
+    };
+
+    if changed {
         state.save_settings();
     }
 }

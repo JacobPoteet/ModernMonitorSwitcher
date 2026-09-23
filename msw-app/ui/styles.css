@@ -199,6 +199,10 @@ h3 {
   border-radius: var(--radius);
 }
 
+.empty a {
+  color: var(--accent);
+}
+
 /* --- Monitors ----------------------------------------------------------- */
 
 .hint {
@@ -545,4 +549,105 @@ footer a {
   border-style: solid;
   border-color: var(--accent);
   color: var(--text);
+}
+
+/* --- First-run guide ---------------------------------------------------- */
+
+.dialog.guide {
+  max-width: 520px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+.guide-steps {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.guide-steps li {
+  flex: 1;
+  counter-increment: step;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding-top: 8px;
+  border-top: 3px solid var(--border);
+}
+
+.guide-steps li::before {
+  content: counter(step) ". ";
+}
+
+.guide-steps li.is-done,
+.guide-steps li.is-current {
+  border-top-color: var(--accent);
+}
+
+.guide-steps li.is-current {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.guide-page[hidden] {
+  display: none;
+}
+
+.guide-page h3 {
+  margin: 0 0 10px;
+}
+
+.guide .guide-page p strong,
+.guide-tips strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.guide-tips {
+  margin: 0 0 14px;
+  padding-left: 20px;
+  color: var(--text-muted);
+}
+
+.guide-tips li + li {
+  margin-top: 4px;
+}
+
+.guide-wide {
+  width: 100%;
+}
+
+.guide-live {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.guide-layout {
+  margin: 8px 0;
+  height: 90px;
+  padding: 6px;
+  background: var(--bg);
+}
+
+.guide-monitors {
+  font-weight: 600;
+}
+
+.guide-summary {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.guide-actions {
+  align-items: center;
+}
+
+.guide-spacer {
+  flex: 1;
 }

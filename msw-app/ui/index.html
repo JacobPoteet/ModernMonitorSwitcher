@@ -54,6 +54,7 @@
           <div class="setting-actions">
             <button id="check-now">Check for updates now</button>
             <button id="open-folder">Open profiles folder</button>
+            <button id="show-guide">Show setup guide</button>
             <button id="reset-config" class="subtle">Restore Windows layout</button>
           </div>
         </div>
@@ -93,6 +94,76 @@
           <button id="hotkey-clear" class="subtle">Remove hotkey</button>
           <button id="hotkey-cancel" class="subtle">Cancel</button>
           <button id="hotkey-confirm" class="primary" disabled>Assign</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- First-run guide -->
+    <div id="guide" class="overlay" hidden>
+      <div class="dialog guide" role="dialog" aria-modal="true" aria-labelledby="guide-title">
+        <ol class="guide-steps" aria-label="Progress">
+          <li>Welcome</li>
+          <li>Arrange</li>
+          <li>Save</li>
+          <li>Done</li>
+        </ol>
+
+        <div class="guide-page" data-step="0">
+          <h3 id="guide-title">Welcome to Modern Monitor Switcher</h3>
+          <p>
+            A <strong>profile</strong> is a saved monitor arrangement: which displays are on,
+            where they sit, their resolution, and which one is main. Save one for each way you
+            use your desk, then switch between them in one click.
+          </p>
+          <p>This takes about a minute. You will set up an arrangement in Windows, then save it here.</p>
+        </div>
+
+        <div class="guide-page" data-step="1" hidden>
+          <h3>Arrange your displays</h3>
+          <p>
+            Open Windows display settings and set things up the way you want this profile to look.
+          </p>
+          <ul class="guide-tips">
+            <li>Drag the monitors to match where they sit on your desk.</li>
+            <li>To leave a monitor out, select it and choose <strong>Disconnect this display</strong> under Multiple displays.</li>
+            <li>Tick <strong>Make this my main display</strong> on the one that should hold the taskbar.</li>
+            <li>Click <strong>Keep changes</strong> when Windows asks.</li>
+          </ul>
+          <button id="guide-open-display" class="guide-wide">Open display settings</button>
+          <div class="guide-live">
+            <div class="status-label">On screen now</div>
+            <div id="guide-layout" class="monitor-layout guide-layout" hidden></div>
+            <div id="guide-monitors" class="guide-monitors"></div>
+          </div>
+        </div>
+
+        <div class="guide-page" data-step="2" hidden>
+          <h3>Save it as a profile</h3>
+          <p>Name this arrangement after when you use it, such as Work, Gaming or Laptop only.</p>
+          <input type="text" id="guide-name" maxlength="64" spellcheck="false" placeholder="Work" />
+          <div class="guide-summary" id="guide-summary"></div>
+          <div class="dialog-error" id="guide-error"></div>
+        </div>
+
+        <div class="guide-page" data-step="3" hidden>
+          <h3 id="guide-done-title">Profile saved</h3>
+          <p>To switch to it later, use any of these:</p>
+          <ul class="guide-tips">
+            <li>Click the tray icon near the clock and pick the profile.</li>
+            <li>Press <strong>Switch</strong> next to it in this window.</li>
+            <li>Give it a hotkey with the button beside its name.</li>
+          </ul>
+          <p>
+            For another arrangement, change your displays in Windows again and choose
+            <strong>Save current layout</strong>.
+          </p>
+        </div>
+
+        <div class="dialog-actions guide-actions">
+          <button id="guide-skip" class="subtle">Skip</button>
+          <span class="guide-spacer"></span>
+          <button id="guide-back">Back</button>
+          <button id="guide-next" class="primary">Get started</button>
         </div>
       </div>
     </div>
