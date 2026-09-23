@@ -1,6 +1,10 @@
 [workspace]
 resolver = "2"
 members = ["msw-core", "msw-cli", "msw-app"]
+# Without this, a bare `cargo run` is ambiguous: msw-app and msw-cli each
+# have their own binary. Explicit invocations (`cargo build -p msw-cli`,
+# `cargo test --workspace`) are unaffected.
+default-members = ["msw-app"]
 
 [workspace.package]
 version = "0.1.0"
