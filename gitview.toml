@@ -1,0 +1,7 @@
+[[task]]
+name = "install"
+command = "powershell -ExecutionPolicy Bypass -File tools/install-local.ps1"
+
+[[task]]
+name = "build-installer"
+command = "powershell -ExecutionPolicy Bypass -File tools/build-release.ps1"
