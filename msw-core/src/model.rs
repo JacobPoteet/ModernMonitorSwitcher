@@ -263,7 +263,9 @@ impl DisplayConfig {
     /// set there is nothing to disambiguate, so the numeric suffix applies
     /// only to monitors still falling back on their model name.
     pub fn active_monitor_labels_with(&self, nicknames: &BTreeMap<String, String>) -> Vec<String> {
-        Self::disambiguate(&self.active_monitors(), nicknames, |m| m.label_with(nicknames))
+        Self::disambiguate(&self.active_monitors(), nicknames, |m| {
+            m.label_with(nicknames)
+        })
     }
 
     /// Model-name labels for every monitor Windows currently knows about,
