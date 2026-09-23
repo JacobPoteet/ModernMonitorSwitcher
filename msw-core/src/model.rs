@@ -263,14 +263,40 @@ impl DisplayConfig {
     /// set there is nothing to disambiguate, so the numeric suffix applies
     /// only to monitors still falling back on their model name.
     pub fn active_monitor_labels_with(&self, nicknames: &BTreeMap<String, String>) -> Vec<String> {
-        let monitors = self.active_monitors();
+        Self::disambiguate(&self.active_monitors(), nicknames, |m| m.label_with(nicknames))
+    }
 
+    /// Model-name labels for every monitor Windows currently knows about,
+    /// active or not, disambiguated the same way as
+    /// [`Self::active_monitor_labels_with`].
+    ///
+    /// Unlike that method, this always returns the raw model name rather than
+    /// a nickname: it feeds the nickname editor, where the nickname already
+    /// has a field of its own and showing it a second time here would be
+    /// redundant. A monitor that already has a nickname is left out of the
+    /// count, the same way the Identify overlay leaves it unnumbered — the
+    /// nickname is enough to tell it apart, so only the monitors still
+    /// sharing an unset model name need the suffix.
+    pub fn monitor_model_labels_with(&self, nicknames: &BTreeMap<String, String>) -> Vec<String> {
+        let monitors: Vec<&MonitorInfo> = self.monitors.iter().collect();
+        Self::disambiguate(&monitors, nicknames, |m| m.label())
+    }
+
+    /// Number duplicate `display` values with a "#N" suffix in list order,
+    /// where duplicates are decided by `label_with(nicknames)` — so a monitor
+    /// with a nickname is never counted against monitors still sharing its
+    /// model name.
+    fn disambiguate(
+        monitors: &[&MonitorInfo],
+        nicknames: &BTreeMap<String, String>,
+        display: impl Fn(&MonitorInfo) -> String,
+    ) -> Vec<String> {
         let mut counts: Vec<(String, usize)> = Vec::new();
-        for m in &monitors {
-            let label = m.label_with(nicknames);
-            match counts.iter_mut().find(|(l, _)| *l == label) {
+        for m in monitors {
+            let key = m.label_with(nicknames);
+            match counts.iter_mut().find(|(l, _)| *l == key) {
                 Some((_, n)) => *n += 1,
-                None => counts.push((label, 1)),
+                None => counts.push((key, 1)),
             }
         }
 
@@ -278,26 +304,27 @@ impl DisplayConfig {
         monitors
             .iter()
             .map(|m| {
-                let label = m.label_with(nicknames);
+                let key = m.label_with(nicknames);
                 let total = counts
                     .iter()
-                    .find(|(l, _)| *l == label)
+                    .find(|(l, _)| *l == key)
                     .map(|(_, n)| *n)
                     .unwrap_or(1);
+                let base = display(m);
                 if total < 2 {
-                    return label;
+                    return base;
                 }
-                let nth = match seen.iter_mut().find(|(l, _)| *l == label) {
+                let nth = match seen.iter_mut().find(|(l, _)| *l == key) {
                     Some((_, n)) => {
                         *n += 1;
                         *n
                     }
                     None => {
-                        seen.push((label.clone(), 1));
+                        seen.push((key.clone(), 1));
                         1
                     }
                 };
-                format!("{label} #{nth}")
+                format!("{base} #{nth}")
             })
             .collect()
     }

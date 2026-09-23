@@ -86,6 +86,13 @@ pub struct MonitorView {
     /// identical monitors apart well enough to name them.
     pub resolution: Option<String>,
     pub position: Option<String>,
+    /// Same geometry as `resolution`/`position`, unformatted, for drawing the
+    /// arrangement diagram — virtual-desktop coordinates, so a monitor to the
+    /// left of the primary has a negative `x`.
+    pub x: Option<i32>,
+    pub y: Option<i32>,
+    pub width: Option<u32>,
+    pub height: Option<u32>,
 }
 
 /// What is on screen right now.

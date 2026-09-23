@@ -113,52 +113,74 @@ fn is_active(config: &msw_core::DisplayConfig, monitor: &msw_core::MonitorInfo) 
     })
 }
 
+/// `DISPLAYCONFIG_ROTATION` values that turn a monitor on its side. The
+/// source mode's width and height need swapping for either of them.
+const ROTATE_90: i32 = 2;
+const ROTATE_270: i32 = 4;
+
 /// The source mode behind an active monitor's path — its resolution and its
 /// position in the virtual desktop.
 ///
 /// An inactive monitor has none, which is fine: it is also the one the user
 /// is least able to identify.
+///
+/// `DISPLAYCONFIG_SOURCE_MODE` reports the panel's native width and height —
+/// *before* the target's rotation is applied — so a portrait monitor still
+/// comes back landscape-shaped here unless that rotation is applied. Every
+/// caller wants what is actually on screen (the overlay's geometry, the
+/// arrangement diagram, the resolution text), so it is applied once, here.
 fn active_mode(
     config: &msw_core::DisplayConfig,
     monitor: &msw_core::MonitorInfo,
 ) -> Option<msw_core::model::SourceMode> {
-    config
-        .paths
-        .iter()
-        .find(|p| {
-            p.is_active() && p.target.id == monitor.id && p.target.adapter_id == monitor.adapter_id
-        })
-        .and_then(|p| {
-            config.modes.iter().find_map(|mode| match mode.mode {
-                msw_core::model::ModeKind::Source(s)
-                    if mode.id == p.source.id && mode.adapter_id == p.source.adapter_id =>
-                {
-                    Some(s)
-                }
-                _ => None,
-            })
-        })
+    let path = config.paths.iter().find(|p| {
+        p.is_active() && p.target.id == monitor.id && p.target.adapter_id == monitor.adapter_id
+    })?;
+
+    let mode = config.modes.iter().find_map(|mode| match mode.mode {
+        msw_core::model::ModeKind::Source(s)
+            if mode.id == path.source.id && mode.adapter_id == path.source.adapter_id =>
+        {
+            Some(s)
+        }
+        _ => None,
+    })?;
+
+    Some(match path.target.rotation {
+        ROTATE_90 | ROTATE_270 => msw_core::model::SourceMode {
+            width: mode.height,
+            height: mode.width,
+            ..mode
+        },
+        _ => mode,
+    })
 }
 
 /// Every monitor Windows currently knows about, for the nickname editor.
 pub fn list_monitors(app: &AppHandle) -> Result<Vec<MonitorView>, String> {
     let config = msw_core::current_config().map_err(|e| e.to_string())?;
     let nicknames = nicknames(app);
+    let models = config.monitor_model_labels_with(&nicknames);
 
     Ok(config
         .monitors
         .iter()
-        .map(|m| {
+        .zip(models)
+        .map(|(m, model)| {
             let active = is_active(&config, m);
             let mode = active_mode(&config, m);
 
             MonitorView {
                 key: m.key(),
-                model: m.label(),
+                model,
                 nickname: nicknames.get(&m.key()).cloned(),
                 active,
                 resolution: mode.map(|s| format!("{}x{}", s.width, s.height)),
                 position: mode.map(|s| format!("{}, {}", s.position.x, s.position.y)),
+                x: mode.map(|s| s.position.x),
+                y: mode.map(|s| s.position.y),
+                width: mode.map(|s| s.width),
+                height: mode.map(|s| s.height),
             }
         })
         .collect())

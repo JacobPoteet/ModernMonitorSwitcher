@@ -138,6 +138,8 @@ function renderMonitors(monitors) {
   const container = $("monitors");
   container.replaceChildren();
 
+  renderMonitorLayout(monitors);
+
   if (!monitors.length) {
     const empty = document.createElement("div");
     empty.className = "empty";
@@ -146,12 +148,89 @@ function renderMonitors(monitors) {
     return;
   }
 
+  const numbers = layoutNumbers(monitors);
   for (const monitor of monitors) {
-    container.append(monitorRow(monitor));
+    container.append(monitorRow(monitor, numbers.get(monitor.key)));
   }
 }
 
-function monitorRow(monitor) {
+/// Which monitors the layout diagram can place, in the order it numbers them.
+function placedMonitors(monitors) {
+  return monitors.filter(
+    (m) => m.active && m.x != null && m.y != null && m.width && m.height,
+  );
+}
+
+/// The diagram's "1", "2", … numbers, keyed by monitor, so the list rows can
+/// show the same number as the rectangle they belong to.
+function layoutNumbers(monitors) {
+  const numbers = new Map();
+  placedMonitors(monitors).forEach((m, i) => numbers.set(m.key, i + 1));
+  return numbers;
+}
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+/// A miniature top-down map of the desktop, one rectangle per active
+/// monitor at its real relative position and aspect ratio — the same idea
+/// as the arrangement diagram in Windows' own Display Settings.
+function renderMonitorLayout(monitors) {
+  const box = $("monitor-layout");
+  const placed = placedMonitors(monitors);
+
+  if (placed.length < 1) {
+    box.replaceChildren();
+    box.hidden = true;
+    return;
+  }
+  box.hidden = false;
+
+  const minX = Math.min(...placed.map((m) => m.x));
+  const minY = Math.min(...placed.map((m) => m.y));
+  const maxX = Math.max(...placed.map((m) => m.x + m.width));
+  const maxY = Math.max(...placed.map((m) => m.y + m.height));
+  const spanX = maxX - minX;
+  const spanY = maxY - minY;
+  const pad = Math.max(spanX, spanY) * 0.04;
+
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${spanX + pad * 2} ${spanY + pad * 2}`);
+  svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+  svg.classList.add("layout-svg");
+
+  placed.forEach((m, i) => {
+    const x = m.x - minX + pad;
+    const y = m.y - minY + pad;
+    const stroke = Math.max(spanX, spanY) * 0.003;
+
+    const rect = document.createElementNS(SVG_NS, "rect");
+    rect.setAttribute("x", x);
+    rect.setAttribute("y", y);
+    rect.setAttribute("width", m.width);
+    rect.setAttribute("height", m.height);
+    rect.setAttribute("rx", Math.min(m.width, m.height) * 0.04);
+    rect.setAttribute("stroke-width", stroke);
+    rect.setAttribute("class", "layout-rect");
+
+    const label = document.createElementNS(SVG_NS, "text");
+    label.setAttribute("x", x + m.width / 2);
+    label.setAttribute("y", y + m.height / 2);
+    label.setAttribute("font-size", Math.min(m.width, m.height) * 0.22);
+    label.setAttribute("class", "layout-label");
+    label.textContent = String(i + 1);
+
+    const title = document.createElementNS(SVG_NS, "title");
+    title.textContent = `${m.model}\n${m.width}×${m.height} at ${m.x}, ${m.y}`;
+
+    const g = document.createElementNS(SVG_NS, "g");
+    g.append(rect, label, title);
+    svg.append(g);
+  });
+
+  box.replaceChildren(svg);
+}
+
+function monitorRow(monitor, number) {
   const row = document.createElement("div");
   row.className = monitor.active ? "monitor" : "monitor is-off";
 
@@ -160,6 +239,12 @@ function monitorRow(monitor) {
 
   const model = document.createElement("div");
   model.className = "monitor-model";
+  if (number) {
+    const index = document.createElement("span");
+    index.className = "monitor-index";
+    index.textContent = String(number);
+    model.append(index);
+  }
   model.append(document.createTextNode(monitor.model));
   if (!monitor.active) {
     const badge = document.createElement("span");
@@ -168,13 +253,11 @@ function monitorRow(monitor) {
     model.append(badge);
   }
 
-  // Resolution and position are how you tell two identical monitors apart:
-  // the one at x=-2560 is the one on the left.
+  // The layout diagram above already shows where this monitor sits; the
+  // detail line just needs its resolution.
   const detail = document.createElement("div");
   detail.className = "monitor-detail";
-  detail.textContent = monitor.active
-    ? `${monitor.resolution} at ${monitor.position}`
-    : "Connected, not in use";
+  detail.textContent = monitor.active ? monitor.resolution : "Connected, not in use";
 
   main.append(model, detail);
 
