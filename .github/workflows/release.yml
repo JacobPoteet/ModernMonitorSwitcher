@@ -33,7 +33,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
 
@@ -91,7 +91,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          configPath: msw-app/tauri.conf.json
+          projectPath: msw-app
           tagName: ${{ github.event.inputs.tag || github.ref_name }}
           releaseName: "Modern Monitor Switcher __VERSION__"
           releaseBody: |
