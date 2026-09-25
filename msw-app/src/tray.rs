@@ -11,7 +11,7 @@
 
 use tauri::menu::{CheckMenuItem, Menu, MenuBuilder, MenuItem, SubmenuBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 
 use crate::state::AppState;
 use crate::{profiles, updater, window};
@@ -27,6 +27,10 @@ const ID_SETTINGS: &str = "settings";
 const ID_MONITORS_OFF: &str = "monitors-off";
 const ID_CHECK_UPDATES: &str = "check-updates";
 const ID_QUIT: &str = "quit";
+
+/// Asks the settings window to open its save dialog, so "New profile..." in
+/// the tray lands on the name field rather than on the window in general.
+const OPEN_SAVE_DIALOG: &str = "open-save-dialog";
 
 /// Create the tray icon. Called once, at startup.
 pub fn create(app: &AppHandle) -> tauri::Result<()> {
@@ -80,7 +84,7 @@ pub fn rebuild(app: &AppHandle) -> tauri::Result<()> {
 /// Tray tooltip, which doubles as the answer to "which profile am I in?".
 fn tooltip_text(active: Option<&str>) -> String {
     match active {
-        Some(name) => format!("Modern Monitor Switcher\nCurrent profile: {name}"),
+        Some(name) => format!("Modern Monitor Switcher\nOn screen: {name}"),
         None => "Modern Monitor Switcher".to_string(),
     }
 }
@@ -120,33 +124,46 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
 
     builder = builder.separator();
 
-    // Save: either as a new profile, or over an existing one.
-    let mut save_menu = SubmenuBuilder::new(app, "Save current layout");
-    let save_new = MenuItem::with_id(app, ID_SAVE_NEW, "As a new profile...", true, None::<&str>)?;
-    save_menu = save_menu.item(&save_new);
-    if !profiles.is_empty() {
-        save_menu = save_menu.separator();
+    // Save: as a new profile, or in place of an existing one. With nothing to
+    // replace, a submenu holding a single item is just an extra hover.
+    if profiles.is_empty() {
+        let save_new = MenuItem::with_id(
+            app,
+            ID_SAVE_NEW,
+            "Save current layout...",
+            true,
+            None::<&str>,
+        )?;
+        builder = builder.item(&save_new);
+    } else {
+        let save_new = MenuItem::with_id(app, ID_SAVE_NEW, "New profile...", true, None::<&str>)?;
+        let mut save_menu = SubmenuBuilder::new(app, "Save current layout")
+            .item(&save_new)
+            .separator();
         for profile in &profiles {
             let item = MenuItem::with_id(
                 app,
                 format!("{OVERWRITE_PREFIX}{}", profile.name),
-                format!("Overwrite {}", profile.name),
+                format!("Replace {}", profile.name),
                 true,
                 None::<&str>,
             )?;
             save_menu = save_menu.item(&item);
         }
+        builder = builder.item(&save_menu.build()?);
     }
-    builder = builder.item(&save_menu.build()?);
-
-    let settings_item =
-        MenuItem::with_id(app, ID_SETTINGS, "Manage profiles...", true, None::<&str>)?;
-    builder = builder.item(&settings_item).separator();
 
     let monitors_off = MenuItem::with_id(
         app,
         ID_MONITORS_OFF,
-        "Turn off all monitors",
+        "Turn off displays",
+        true,
+        None::<&str>,
+    )?;
+    let settings_item = MenuItem::with_id(
+        app,
+        ID_SETTINGS,
+        "Open Monitor Switcher",
         true,
         None::<&str>,
     )?;
@@ -161,8 +178,9 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
 
     builder
         .item(&monitors_off)
-        .item(&check_updates)
         .separator()
+        .item(&settings_item)
+        .item(&check_updates)
         .item(&quit)
         .build()
 }
@@ -197,7 +215,13 @@ fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
     }
 
     match id.as_str() {
-        ID_SAVE_NEW | ID_SETTINGS => window::show(&app),
+        ID_SETTINGS => window::show(&app),
+        ID_SAVE_NEW => {
+            window::show(&app);
+            if let Err(e) = app.emit(OPEN_SAVE_DIALOG, ()) {
+                tracing::debug!(error = %e, "no listener for the save dialog event");
+            }
+        }
         ID_MONITORS_OFF => {
             // The broadcast blocks until every window has handled it.
             std::thread::spawn(msw_core::power::all_monitors_off);

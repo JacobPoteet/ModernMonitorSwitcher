@@ -234,6 +234,12 @@ pub async fn check_for_update(app: AppHandle) -> Result<UpdateStatus, String> {
     crate::updater::check(&app).await
 }
 
+/// Download and install the available update, then restart into it.
+#[tauri::command]
+pub async fn install_update(app: AppHandle) -> Result<(), String> {
+    crate::updater::install(&app).await
+}
+
 /// Restore whatever layout Windows remembers for the monitors connected now.
 #[tauri::command]
 pub fn reset_display_config() -> Result<(), String> {

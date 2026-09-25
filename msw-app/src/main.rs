@@ -84,6 +84,7 @@ fn main() {
             commands::get_autostart,
             commands::set_autostart,
             commands::check_for_update,
+            commands::install_update,
             commands::reset_display_config,
             commands::open_profiles_folder,
             commands::open_repository,
@@ -125,6 +126,8 @@ fn main() {
                     let _ = window.set_title("Modern Monitor Switcher (sandbox)");
                 }
             }
+
+            window::fit_to_screen(&handle);
 
             // Show the window on a normal launch, but not when Windows started
             // us at login.

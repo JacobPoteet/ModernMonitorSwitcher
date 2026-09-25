@@ -24,7 +24,7 @@ import pathlib
 
 from PIL import Image, ImageDraw
 
-ACCENT = (59, 130, 246, 255)  # #3B82F6
+ACCENT = (15, 148, 136, 255)  # #0F9488, "phosphor" teal
 WHITE = (255, 255, 255, 255)
 TRANSPARENT = (0, 0, 0, 0)
 

@@ -12,15 +12,20 @@
       {
         "label": "main",
         "title": "Modern Monitor Switcher",
-        "width": 880,
-        "height": 640,
-        "minWidth": 560,
-        "minHeight": 420,
+        "width": 1040,
+        "height": 730,
+        "minWidth": 600,
+        "minHeight": 460,
         "resizable": true,
         "center": true,
         "visible": false,
         "skipTaskbar": false,
-        "decorations": true
+        "decorations": false,
+        "shadow": true,
+        "transparent": true,
+        "windowEffects": {
+          "effects": ["mica"]
+        }
       }
     ],
     "security": {
