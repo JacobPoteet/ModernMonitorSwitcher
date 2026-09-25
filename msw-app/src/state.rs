@@ -80,6 +80,20 @@ pub struct ProfileView {
     pub active: bool,
     /// Accelerator bound to this profile, if any.
     pub hotkey: Option<String>,
+    /// Where each monitor the profile turns on sits, for drawing it.
+    pub screens: Vec<ScreenView>,
+    /// Monitors the profile knows about but leaves switched off.
+    pub off: Vec<String>,
+}
+
+/// One lit monitor in a profile, in virtual-desktop coordinates.
+#[derive(Debug, Clone, Serialize)]
+pub struct ScreenView {
+    pub label: String,
+    pub x: i32,
+    pub y: i32,
+    pub width: u32,
+    pub height: u32,
 }
 
 /// A monitor as the settings window sees it.

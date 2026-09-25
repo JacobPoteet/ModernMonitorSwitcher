@@ -1,3 +1,5 @@
+<img src="msw-app/icons/icon.png" alt="" width="96" align="right">
+
 # Modern Monitor Switcher
 
 Save your monitor arrangements as named profiles and switch between them from
@@ -5,6 +7,8 @@ the system tray, a hotkey, or the command line. Installs properly, starts with
 Windows, and updates itself.
 
 Windows 10 and 11.
+
+![The Profiles page: each saved profile drawn as the monitors it turns on, with the one on screen now highlighted](docs/screenshots/profiles.png)
 
 ## Why
 
@@ -50,18 +54,27 @@ Arrange your monitors however you want them using the normal Windows display
 settings, then open Modern Monitor Switcher and choose **Save current layout**.
 Give it a name — `Work` and `Play`, say. Repeat for each arrangement.
 
-The first time it opens, a short guide walks through this. **Show setup
-guide** in Settings brings it back.
+The first time it opens, a short guide walks through this. **Show guide** in
+Settings brings it back.
 
-After that, switching is one click in the tray menu.
+Each profile is drawn as the monitors it turns on, so you can tell them apart at
+a glance. After that, switching is one click: on a profile in the window, or on
+its name in the tray menu. The **...** button on a profile has rename, hotkey,
+replace and delete.
 
-**Start with Windows** is in the settings window. Turn it on once and the
-application is simply always there.
+**Displays** shows what is on screen now and lets you name each monitor, so
+profiles read "Left, Middle" instead of model numbers. **Identify** puts each
+name on its screen.
+
+![The Displays page in dark mode, with the live arrangement and a name for each monitor](docs/screenshots/displays-dark.png)
+
+**Start with Windows** is in Settings. Turn it on once and the application is
+simply always there.
 
 ### Hotkeys
 
-Each profile can have a global hotkey. Click the hotkey button next to a
-profile and press the combination you want. It needs at least one of Ctrl, Alt
+Each profile can have a global hotkey. Choose **Set hotkey** from the profile's
+**...** menu and press the combination you want. It needs at least one of Ctrl, Alt
 or Shift, so you cannot accidentally take over a bare letter system-wide.
 
 ### Command line and Stream Deck
@@ -92,8 +105,8 @@ talks to Windows directly, not to the app.
 
 ## If something goes wrong
 
-**The displays end up somewhere unusable.** Run `msw reset`, or use **Restore
-Windows layout** in the settings window. That asks Windows to restore its own
+**The displays end up somewhere unusable.** Run `msw reset`, or use **Restore the
+Windows layout** under Troubleshooting in Settings. That asks Windows to restore its own
 remembered arrangement for whatever monitors are currently connected. If you
 cannot see anything at all, Windows reverts an unconfirmed display change after
 about 15 seconds on its own; failing that, boot into safe mode.

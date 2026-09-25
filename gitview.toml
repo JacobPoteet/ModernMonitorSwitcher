@@ -5,3 +5,11 @@ command = "powershell -ExecutionPolicy Bypass -File tools/install-local.ps1"
 [[task]]
 name = "build-installer"
 command = "powershell -ExecutionPolicy Bypass -File tools/build-release.ps1"
+
+[[task]]
+name = "sandbox"
+command = "powershell -ExecutionPolicy Bypass -File tools/run-sandbox.ps1"
+
+[[task]]
+name = "sandbox-keep"
+command = "powershell -ExecutionPolicy Bypass -File tools/run-sandbox.ps1 -Keep"

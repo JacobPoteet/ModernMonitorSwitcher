@@ -37,7 +37,7 @@ On a machine with no `%APPDATA%\ModernMonitorSwitcher` folder:
 - [ ] Saving from the guide creates the profile and shows the final page;
       pressing Enter to save does not skip past it.
 - [ ] After **Done** or **Skip**, reopening the window does not show the
-      guide again. **Show setup guide** in Settings brings it back.
+      guide again. **Show guide** in Settings brings it back.
 - [ ] Upgrading an install that already has profiles does not show the
       guide.
 
@@ -45,11 +45,18 @@ On a machine with no `%APPDATA%\ModernMonitorSwitcher` folder:
 
 With every monitor on:
 
-- [ ] **Save current layout** captures a profile; the monitor list in the
-      settings window reads correctly.
+- [ ] **Save current layout** captures a profile; its tile draws the same
+      arrangement as Windows' Display settings, with a taskbar strip on the
+      main display.
+- [ ] When the layout on screen matches no profile, a dashed **Current
+      layout** tile appears first, and its **Save** opens the save dialog.
+- [ ] **Save current layout > New profile...** in the tray opens the window
+      straight onto the save dialog.
 - [ ] Two monitors of the same model are distinguished, as `NAME #1` and
       `NAME #2`, rather than listed twice identically.
 - [ ] Saving over an existing profile asks first.
+- [ ] **Replace with current layout** in a profile's ... menu asks, then
+      updates that profile's picture.
 - [ ] A name containing `\ / : * ? " < > |` is rejected with a clear message.
 
 With the second computer holding some of the monitors:
@@ -60,9 +67,12 @@ With the second computer holding some of the monitors:
 
 - [ ] Switching from the tray works, and the displays end up as saved:
       resolution, refresh rate, arrangement, and which one is primary.
-- [ ] Switching from the settings window works.
-- [ ] The check mark in the tray, and the **Active** badge in the window,
-      follow the profile that is actually on screen.
+- [ ] Clicking a profile tile switches to it; its screens light up in turn.
+- [ ] Right-clicking a tile opens the same menu as its ... button, and the
+      menu works with the arrow keys and Escape.
+- [ ] The check mark in the tray, and the highlighted **On screen** tile in
+      the window, follow the profile that is actually on screen, including
+      after switching from the tray or a hotkey with the window open.
 - [ ] The tray tooltip names the current profile.
 - [ ] Switching to the profile that is already active is a no-op, not an
       error.
@@ -122,8 +132,8 @@ Needs two releases to test properly.
 
 ## 8. Edge cases
 
-- [ ] **Turn off all monitors** blanks them; a key press wakes them.
-- [ ] **Restore Windows layout** recovers a sane configuration.
+- [ ] **Turn off displays** blanks them; a key press wakes them.
+- [ ] **Restore the Windows layout** recovers a sane configuration.
 - [ ] Deleting the profiles folder while running does not crash it; the tray
       reports no profiles.
 - [ ] Hand-editing a profile JSON into something invalid makes that one
@@ -131,3 +141,19 @@ Needs two releases to test properly.
 - [ ] Applying a profile whose monitors are not connected fails with a
       readable message rather than doing something destructive.
 - [ ] Unplugging a monitor while the application runs does not crash it.
+
+## 9. Window
+
+- [ ] On Windows 11 the window has the Mica backdrop; on Windows 10 it is
+      solid, not see-through.
+- [ ] The title bar drags the window, double-click maximizes, and dragging
+      it to a screen edge snaps.
+- [ ] Minimize, maximize/restore and close work; close hides to the tray
+      rather than quitting. The maximize glyph changes when maximized.
+- [ ] The window resizes from every edge, and down to its minimum size the
+      tiles reflow without overlapping.
+- [ ] Light and dark mode both follow the Windows setting, including when it
+      changes with the window open.
+- [ ] With **Reduce animation** on in Windows, switching does not animate.
+- [ ] Every control is reachable with Tab and shows a focus ring; dialogs keep
+      Tab inside them, and Escape closes the top one.

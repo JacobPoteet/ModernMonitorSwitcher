@@ -12,7 +12,7 @@ use std::collections::BTreeMap;
 
 use tauri::{AppHandle, Emitter, Manager};
 
-use crate::state::{AppState, CurrentStatus, MonitorView, ProfileView};
+use crate::state::{AppState, CurrentStatus, MonitorView, ProfileView, ScreenView};
 use crate::tray;
 
 /// Event the settings window listens for to reload its list.
@@ -64,16 +64,52 @@ pub fn list(app: &AppHandle) -> Result<Vec<ProfileView>, String> {
         .into_iter()
         .map(|p| {
             let (summary, monitors) = summarize(&p, &nicknames);
+            let (screens, off) = layout(&p.config, &nicknames);
             ProfileView {
                 active: current.as_ref().is_some_and(|c| p.is_active(c)),
                 summary,
                 monitors,
                 saved_at: p.saved_at.clone(),
                 hotkey: settings.hotkeys.get(&p.name).cloned(),
+                screens,
+                off,
                 name: p.name,
             }
         })
         .collect())
+}
+
+/// The geometry of every monitor a configuration turns on, and the names of
+/// the ones it leaves off, so the window can draw a profile as the desk it
+/// describes rather than a list of names.
+fn layout(
+    config: &msw_core::DisplayConfig,
+    nicknames: &BTreeMap<String, String>,
+) -> (Vec<ScreenView>, Vec<String>) {
+    let labels = config.active_monitor_labels_with(nicknames);
+    let screens = config
+        .active_monitors()
+        .into_iter()
+        .zip(labels)
+        .filter_map(|(m, label)| {
+            active_mode(config, m).map(|mode| ScreenView {
+                label,
+                x: mode.position.x,
+                y: mode.position.y,
+                width: mode.width,
+                height: mode.height,
+            })
+        })
+        .collect();
+
+    let off = config
+        .monitors
+        .iter()
+        .filter(|m| !is_active(config, m))
+        .map(|m| m.label_with(nicknames))
+        .collect();
+
+    (screens, off)
 }
 
 /// Describe what is on screen right now.
