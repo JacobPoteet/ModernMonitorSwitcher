@@ -1,6 +1,8 @@
-<img src="msw-app/icons/icon.png" alt="" width="96" align="right">
+<p align="center">
+  <img src="msw-app/icons/icon.png" alt="" width="72">
+</p>
 
-# Modern Monitor Switcher
+<h1 align="center">Modern Monitor Switcher</h1>
 
 Save your monitor arrangements as named profiles and switch between them from
 the system tray, a hotkey, or the command line. Installs properly, starts with
