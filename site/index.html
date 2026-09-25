@@ -709,7 +709,7 @@ footer a { color: var(--text-2); }
 <section class="hero">
   <div class="wrap">
     <h1 class="reveal">Every monitor setup, <em>one click</em> away.</h1>
-    <p class="lede reveal">Save how your screens are arranged as profiles, like <b>Work</b>, <b>Couch</b> or <b>Share with work PC</b>. Then switch between them from the tray, a hotkey or the command line.</p>
+    <p class="lede reveal">Save how your screens are arranged as profiles, like <b>Play</b>, <b>Work</b> or <b>Couch</b>. Then switch between them from the tray, a hotkey or the command line.</p>
     <div class="actions reveal">
       <a class="btn btn-primary" href="https://github.com/JacobPoteet/ModernMonitorSwitcher/releases/latest">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16"/></svg>
@@ -748,23 +748,23 @@ footer a { color: var(--text-2); }
 
     <div class="desk-layout">
       <div class="beats">
+        <article class="beat" data-profile="play">
+          <span class="tag">Play</span>
+          <h3>The whole desk</h3>
+          <p>All three monitors on your own PC, in the positions you arranged, with the taskbar on the middle one.</p>
+        </article>
         <article class="beat" data-profile="work">
           <span class="tag">Work</span>
-          <h3>The whole desk</h3>
-          <p>Three monitors, in the positions you arranged, with the taskbar on the middle one. This is the profile you’ll come back to.</p>
-        </article>
-        <article class="beat" data-profile="share">
-          <span class="tag">Share with work PC</span>
           <h3>Two computers, one set of monitors</h3>
-          <p>When the work laptop comes on, turn off the two screens it uses. Monitors set to pick their input on their own switch over to it. The work computer doesn’t need anything installed.</p>
+          <p>When the work laptop comes on, hand it the middle and right screens and keep the left one for yourself. Monitors set to pick their input on their own switch over to it. The work computer doesn’t need anything installed.</p>
         </article>
         <article class="beat" data-profile="couch">
           <span class="tag">Couch</span>
           <h3>Just the TV</h3>
           <p>Turn the desk off, turn the TV on, and make it the main display. Games and videos open on the screen you’re actually watching.</p>
         </article>
-        <article class="beat" data-profile="work">
-          <span class="tag">Work</span>
+        <article class="beat" data-profile="play">
+          <span class="tag">Play</span>
           <h3>And back again</h3>
           <p>One click brings the desk back exactly as it was, down to which screen holds the taskbar.</p>
         </article>
@@ -785,13 +785,13 @@ footer a { color: var(--text-2); }
               <rect class="bar" x="76" y="276" width="168" height="6" rx="2"/>
               <text class="name" x="160" y="226">Left</text>
               <text class="note note-off" x="160" y="252">Off</text>
-              <text class="note note-away" x="160" y="252">Work PC</text>
             </g>
             <g class="screen" data-screen="middle" style="--i:1">
               <rect class="glass" x="254" y="186" width="176" height="100" rx="6"/>
               <rect class="bar" x="258" y="276" width="168" height="6" rx="2"/>
               <text class="name" x="342" y="226">Middle</text>
               <text class="note note-off" x="342" y="252">Off</text>
+              <text class="note note-away" x="342" y="252">Work PC</text>
             </g>
             <g class="screen" data-screen="right" style="--i:2">
               <rect class="glass" x="436" y="162" width="84" height="148" rx="6"/>
@@ -804,8 +804,8 @@ footer a { color: var(--text-2); }
         </div>
 
         <div class="tray" aria-label="Tray menu">
-          <button type="button" data-go="work" aria-pressed="true"><span class="check">✓</span>Work<kbd>Ctrl+Alt+1</kbd></button>
-          <button type="button" data-go="share" aria-pressed="false"><span class="check">✓</span>Share with work PC<kbd>Ctrl+Alt+2</kbd></button>
+          <button type="button" data-go="play" aria-pressed="true"><span class="check">✓</span>Play<kbd>Ctrl+Alt+1</kbd></button>
+          <button type="button" data-go="work" aria-pressed="false"><span class="check">✓</span>Work<kbd>Ctrl+Alt+2</kbd></button>
           <button type="button" data-go="couch" aria-pressed="false"><span class="check">✓</span>Couch<kbd>Ctrl+Alt+3</kbd></button>
           <hr>
           <div class="muted">Settings</div>
@@ -824,7 +824,7 @@ footer a { color: var(--text-2); }
         <h3>From the tray</h3>
         <p>Right-click the icon by the clock and pick a profile. It’s there as soon as Windows starts.</p>
         <div class="demo">
-          <div class="mini-tray" aria-hidden="true"><span class="on">Work</span><span>Share with work PC</span><span>Couch</span></div>
+          <div class="mini-tray" aria-hidden="true"><span class="on">Play</span><span>Work</span><span>Couch</span></div>
         </div>
       </div>
       <div class="card reveal">
@@ -913,7 +913,7 @@ footer a { color: var(--text-2); }
 
 <footer>
   <div class="wrap">
-    <span>Modern Monitor Switcher · MPL 2.0</span>
+    <span>Made by <a href="https://github.com/JacobPoteet">Jacob Poteet</a> · MPL 2.0</span>
     <span>Adapter matching ported from <a href="https://sourceforge.net/projects/monitorswitcher">MonitorSwitcher</a> by Martin Krämer.</span>
   </div>
 </footer>
@@ -927,8 +927,8 @@ footer a { color: var(--text-2); }
   // What each profile does to each screen: main (lit, holds the taskbar),
   // lit, off, or away (handed to the other computer).
   var profiles = {
-    work:  { left: "lit",  middle: "main", right: "lit",  tv: "off" },
-    share: { left: "away", middle: "main", right: "away", tv: "off" },
+    play:  { left: "lit",  middle: "main", right: "lit",  tv: "off" },
+    work:  { left: "main", middle: "away", right: "away", tv: "off" },
     couch: { left: "off",  middle: "off",  right: "off",  tv: "main" }
   };
 
@@ -951,7 +951,7 @@ footer a { color: var(--text-2); }
     show(beat.dataset.profile);
   }
 
-  show("work");
+  show("play");
   setCurrent(beats[0]);
 
   if ("IntersectionObserver" in window) {
