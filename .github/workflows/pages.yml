@@ -1,0 +1,48 @@
+# Publishes the project page in site/ to GitHub Pages.
+#
+# The screenshots and icon are copied in at build time rather than kept in
+# site/, so the page always shows the same images as the README.
+
+name: Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - site/**
+      - docs/screenshots/**
+      - msw-app/icons/icon.png
+      - .github/workflows/pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Assemble the site
+        run: |
+          mkdir -p _site/screenshots
+          cp -r site/. _site/
+          cp docs/screenshots/*.png _site/screenshots/
+          cp msw-app/icons/icon.png _site/icon.png
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -6,7 +6,7 @@ Save your monitor arrangements as named profiles and switch between them from
 the system tray, a hotkey, or the command line. Installs properly, starts with
 Windows, and updates itself.
 
-Windows 10 and 11.
+Windows 10 and 11. [Project page](https://jacobpoteet.github.io/ModernMonitorSwitcher/)
 
 ![The Profiles page: each saved profile drawn as the monitors it turns on, with the one on screen now highlighted](docs/screenshots/profiles.png)
 
